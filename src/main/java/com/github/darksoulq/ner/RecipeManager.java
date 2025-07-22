@@ -6,6 +6,8 @@ import com.github.darksoulq.ner.model.ParsedRecipeView;
 import io.papermc.paper.potion.PaperPotionBrewer;
 import net.minecraft.server.MinecraftServer;
 import org.bukkit.Bukkit;
+import org.bukkit.Keyed;
+import org.bukkit.NamespacedKey;
 import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
@@ -14,9 +16,11 @@ import java.util.*;
 
 public class RecipeManager {
     private static final Map<ItemStack, List<Object>> recipeMap = new HashMap<>();
+    private static final Set<String> IGNORED_RECIPES = new HashSet<>();
 
     public static void loadVanillaRecipes() {
         Bukkit.recipeIterator().forEachRemaining(recipe -> {
+            if (recipe instanceof Keyed keyed && IGNORED_RECIPES.contains(keyed.getKey().toString())) return;
             if (RecipeLayoutRegistry.hasLayout(recipe.getClass())) {
                 recipeMap.computeIfAbsent(recipe.getResult().asOne(), k -> new ArrayList<>()).add(recipe);
             }
@@ -29,6 +33,10 @@ public class RecipeManager {
                     "No RecipeLayout registered for: " + recipe.getClass().getName());
         }
         recipeMap.computeIfAbsent(result, k -> new ArrayList<>()).add(recipe);
+    }
+
+    public static void addIgnoredRecipe(NamespacedKey key) {
+        IGNORED_RECIPES.add(key.toString());
     }
 
     public static Set<ItemStack> getAllItems() {

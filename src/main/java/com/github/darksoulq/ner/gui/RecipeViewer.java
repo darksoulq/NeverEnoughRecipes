@@ -75,7 +75,7 @@ public class RecipeViewer {
                 new int[]{1, 2, 3, 4, 5, 6, 7}, GuiView.Segment.TOP);
 
         return new Gui.Builder(MenuType.GENERIC_9X6, title)
-                .addFlag(GuiFlag.DISABLE_ADVANCEMENTS)
+                .addFlags(GuiFlag.DISABLE_ADVANCEMENTS)
                 .addLayer(listedLayers)
                 .addLayer(paginatedProviders)
                 .set(SlotPosition.top(0), GuiButton.of(

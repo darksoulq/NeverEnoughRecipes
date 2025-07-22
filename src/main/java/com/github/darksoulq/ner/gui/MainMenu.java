@@ -68,7 +68,7 @@ public class MainMenu {
         filler.setData(DataComponentTypes.ITEM_NAME, Component.text(""));
 
         return new Gui.Builder(MenuType.ANVIL, TITLE)
-                .addFlag(GuiFlag.DISABLE_ADVANCEMENTS)
+                .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
                 .addLayer(page)
                 .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.get().getStack(),
                         (view, click) -> page.prev(view)))
