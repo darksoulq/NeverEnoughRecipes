@@ -1,0 +1,15 @@
+name: NeverEnoughRecipes
+version: '0.1.0'
+main: com.github.darksoulq.ner.NeverEnoughRecipes
+api-version: '1.21'
+authors: [ DarkSoul ]
+
+dependencies:
+  server:
+    AbyssalLib:
+      required: true
+      load: BEFORE
+  bootstrap:
+    AbyssalLib:
+      required: true
+      load: BEFORE
