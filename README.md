@@ -48,7 +48,6 @@ Register provider and recipes:
 ```Java
 RecipeLayoutRegistry.register(new YourRecipeParser());
 
-// then in main, or somewhere else
 RecipeManager.addCustomRecipe(RecipeObject, ResultStack);
 ```
 
@@ -56,4 +55,4 @@ In the off chance that you are registering your recipes in bukkit but not allowi
 ```Java
 RecipeManager.addIgnoredRecipe(NamespacedKey);
 ```
-this MUET be called in onEnablle() incase you are removing your (vanilla) recipes from default parsers (incase you wish to wrap it for your own parser)
+this MUST be called in onEnable() in case you are removing your (vanilla) recipes from default parsers (in case you wish to wrap it for your own parser)
