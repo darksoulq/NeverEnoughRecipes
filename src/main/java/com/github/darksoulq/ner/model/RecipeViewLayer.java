@@ -2,8 +2,8 @@ package com.github.darksoulq.ner.model;
 
 import com.github.darksoulq.abyssallib.world.level.inventory.gui.*;
 import com.github.darksoulq.abyssallib.world.level.inventory.gui.impl.GuiAnimatedItem;
-import org.bukkit.Material;
-import org.bukkit.inventory.Inventory;
+import com.github.darksoulq.ner.data.RecipeManager;
+import com.github.darksoulq.ner.gui.RecipeViewer;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
@@ -21,13 +21,17 @@ public class RecipeViewLayer implements GuiLayer {
             List<ItemStack> stackList = entry.getValue();
             SlotPosition position = SlotPosition.top(slot);
 
-            GuiAnimatedItem animated = GuiAnimatedItem.of((gview, currentTick) -> {
+            GuiAnimatedButton animated = new GuiAnimatedButton((gView, currentTick) -> {
                 if (lastTime == 0) lastTime = currentTick;
                 int elapsed = currentTick - lastTime;
 
                 if (stackList.isEmpty()) return null;
                 int index = (elapsed / 20) % stackList.size();
                 return stackList.get(index);
+            }, (gView, type, cursor, current) -> {
+                if (RecipeManager.getAllItems().contains(current)) {
+                    GuiManager.open(gView.getInventoryView().getPlayer(), RecipeViewer.create(current));
+                }
             });
 
             items.put(position, animated);

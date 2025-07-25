@@ -44,11 +44,7 @@ public class ShapelessRecipeLayout extends RecipeLayout<ShapelessRecipe> {
 
             if (choice == null || choice.equals(RecipeChoice.empty())) continue;
 
-            if (choice instanceof RecipeChoice.ExactChoice exact) {
-                slotMap.put(slot, exact.getChoices());
-            } else if (choice instanceof RecipeChoice.MaterialChoice mat) {
-                slotMap.put(slot, mat.getChoices().stream().map(ItemStack::new).toList());
-            }
+            setItems(slotMap, slot, choice);
         }
 
         ItemStack display = new ItemStack(Material.CRAFTING_TABLE);

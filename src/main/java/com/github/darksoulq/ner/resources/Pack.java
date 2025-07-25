@@ -3,6 +3,7 @@ package com.github.darksoulq.ner.resources;
 import com.github.darksoulq.abyssallib.server.resource.Namespace;
 import com.github.darksoulq.abyssallib.server.resource.ResourcePack;
 import com.github.darksoulq.abyssallib.server.resource.asset.Font;
+import com.github.darksoulq.abyssallib.server.resource.asset.Lang;
 import com.github.darksoulq.abyssallib.server.resource.asset.Model;
 import com.github.darksoulq.abyssallib.server.resource.asset.Texture;
 import com.github.darksoulq.abyssallib.server.resource.asset.definition.Selector;
@@ -64,6 +65,13 @@ public class Pack {
         ns.itemDefinition("forward", nextSel, false);
         ns.itemDefinition("backward", prevSel, false);
         ns.itemDefinition("close", closeSel, false);
+
+        // Lang
+        Lang ln = ns.lang("en_us", false);
+        ln.put("item.ner.forward", "Forward");
+        ln.put("item.ner.backward", "Backward");
+        ln.put("item.ner.close", "Close");
+        ln.put("item.ner.book", "Never Enough Recipes");
 
         pack.register(false);
     }

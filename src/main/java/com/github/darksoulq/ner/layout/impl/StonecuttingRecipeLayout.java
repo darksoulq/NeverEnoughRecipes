@@ -23,11 +23,7 @@ public class StonecuttingRecipeLayout extends RecipeLayout<StonecuttingRecipe> {
     @Override
     public ParsedRecipeView parseRecipe(StonecuttingRecipe recipe) {
         Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
-        if (recipe.getInputChoice() instanceof RecipeChoice.ExactChoice exact) {
-            slotMap.put(TARGET_SLOT, exact.getChoices());
-        } else if (recipe.getInputChoice() instanceof RecipeChoice.MaterialChoice mat) {
-            slotMap.put(TARGET_SLOT, mat.getChoices().stream().map(ItemStack::new).toList());
-        }
+        setItems(slotMap, TARGET_SLOT, recipe.getInputChoice());
         return new ParsedRecipeView(slotMap, Pack.ONE_SLOT, -8, new ItemStack(Material.STONECUTTER));
     }
 }

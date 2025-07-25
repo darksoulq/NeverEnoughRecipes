@@ -24,11 +24,7 @@ public class FurnaceRecipeLayout extends RecipeLayout<FurnaceRecipe> {
         Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
         RecipeChoice choice = recipe.getInputChoice();
         if (choice.equals(RecipeChoice.empty())) return new ParsedRecipeView(new HashMap<>(), Pack.COOKING, 0, new ItemStack(Material.FURNACE));
-        if (choice instanceof RecipeChoice.MaterialChoice material) {
-            slotMap.put(TARGET_SLOT, material.getChoices().stream().map(ItemStack::new).toList());
-        } else if (choice instanceof RecipeChoice.ExactChoice exact) {
-            slotMap.put(TARGET_SLOT, exact.getChoices());
-        }
+        setItems(slotMap, TARGET_SLOT, choice);
         return new ParsedRecipeView(slotMap, Pack.COOKING, -8, new ItemStack(Material.FURNACE));
     }
 }

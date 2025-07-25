@@ -46,13 +46,19 @@ ProviderItem is what block this recipe is used in, e.g for ShapedRecipes it is a
 
 Register provider and recipes:
 ```Java
-RecipeLayoutRegistry.register(new YourRecipeParser());
+NerApi.registerLayout(new YourRecipeParser());
 
-RecipeManager.addCustomRecipe(RecipeObject, ResultStack);
+NerApi.registerItem("namespace", resultItem, recipeObject);
+```
+namespace can be anything, e.g. it could be your plugin name ("myplugin"), (if its a vanilla item its recommend to set namespace to "minecraft")
+
+In case your recipe is from vanilla but the item is a custom item, add it to a namespace as such:
+```java
+NerApi.addItemToNamespace("namespace", ItemStack);
 ```
 
 In the off chance that you are registering your recipes in bukkit but not allowing crafting in vanilla blocks.
 ```Java
-RecipeManager.addIgnoredRecipe(NamespacedKey);
+NerApi.ignoreVanillaRecipe(NamespacedKey);
 ```
 this MUST be called in onEnable() in case you are removing your (vanilla) recipes from default parsers (in case you wish to wrap it for your own parser)

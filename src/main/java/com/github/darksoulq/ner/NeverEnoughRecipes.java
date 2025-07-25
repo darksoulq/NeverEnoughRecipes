@@ -1,9 +1,14 @@
 package com.github.darksoulq.ner;
 
 import com.github.darksoulq.abyssallib.server.command.CommandBus;
+import com.github.darksoulq.abyssallib.server.config.ConfigManager;
+import com.github.darksoulq.abyssallib.server.config.ConfigType;
 import com.github.darksoulq.abyssallib.server.event.EventBus;
+import com.github.darksoulq.ner.data.Events;
+import com.github.darksoulq.ner.data.InternalCommands;
 import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import com.github.darksoulq.ner.layout.impl.*;
+import com.github.darksoulq.ner.resources.Config;
 import com.github.darksoulq.ner.resources.Pack;
 import com.github.darksoulq.ner.resources.UiItems;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -17,6 +22,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
     @Override
     public void onEnable() {
         LOGGER = getLogger();
+        ConfigManager.register(Config.class, ConfigType.YAML);
         Pack.init(this);
         registerDefaults();
         CommandBus.register(MODID, new InternalCommands());
@@ -34,6 +40,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
         RecipeLayoutRegistry.register(new BlastingRecipeLayout());
         RecipeLayoutRegistry.register(new SmokingRecipeLayout());
         RecipeLayoutRegistry.register(new CampfireRecipeLayout());
+        RecipeLayoutRegistry.register(new SmithingTransformRecipeLayout());
         RecipeLayoutRegistry.register(new BrewingRecipeLayout());
         RecipeLayoutRegistry.register(new StonecuttingRecipeLayout());
     }

@@ -6,7 +6,8 @@ import com.github.darksoulq.abyssallib.world.level.inventory.gui.impl.GuiButton;
 import com.github.darksoulq.abyssallib.world.level.inventory.gui.impl.GuiItem;
 import com.github.darksoulq.abyssallib.world.level.inventory.gui.impl.PaginatedElements;
 import com.github.darksoulq.abyssallib.world.level.item.Items;
-import com.github.darksoulq.ner.RecipeManager;
+import com.github.darksoulq.ner.data.NamespacedFilterManager;
+import com.github.darksoulq.ner.data.RecipeManager;
 import com.github.darksoulq.ner.resources.Pack;
 import com.github.darksoulq.ner.resources.UiItems;
 import com.github.darksoulq.ner.util.TextUtil;
@@ -26,7 +27,7 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 public class MainMenu {
-    private static final Map<String, BiFunction<String, GuiElement, Boolean>> FILTERS = new HashMap<>();
+    private static final Map<String, BiFunction<String, ItemStack, Boolean>> FILTERS = new HashMap<>();
     private static final Map<UUID, ItemStack[]> INVENTORY_BACKUPS = new HashMap<>();
     private static final Component TITLE = TextUtil.parse("<white><offset><title></white>",
             Placeholder.parsed("title", Pack.MAIN_MENU.toMiniMessageString()),
@@ -38,7 +39,14 @@ public class MainMenu {
             27, 28, 29, 30, 31, 32, 33, 34, 35
     };
 
-    public static void addFilter(String key, BiFunction<String, GuiElement, Boolean> filter) {
+    static {
+        addFilter("@", (input, stack) -> {
+            List<String> nm =  NamespacedFilterManager.getMatchingNamespaces(input);
+            return NamespacedFilterManager.getItemsForNamespaces(nm).contains(stack);
+        });
+    }
+
+    public static void addFilter(String key, BiFunction<String, ItemStack, Boolean> filter) {
         FILTERS.put(key.toLowerCase(Locale.ROOT), filter);
     }
 
@@ -78,6 +86,9 @@ public class MainMenu {
                 .onOpen(view -> {
                     Player player = (Player) view.getInventoryView().getPlayer();
                     INVENTORY_BACKUPS.put(player.getUniqueId(), player.getInventory().getContents());
+                    ItemStack[] clearer = view.getBottom().getContents();
+                    Arrays.fill(clearer, ItemStack.empty());
+                    view.getBottom().setContents(clearer);
                 })
                 .onTick(view -> {
                     if (!(view.getInventoryView() instanceof AnvilView anvil)) return;
@@ -94,9 +105,9 @@ public class MainMenu {
                         String prefix = input.substring(0, prefixIndex).toLowerCase(Locale.ROOT);
                         String query = input.substring(prefixIndex + 1);
 
-                        BiFunction<String, GuiElement, Boolean> func = FILTERS.get(prefix);
+                        BiFunction<String, ItemStack, Boolean> func = FILTERS.get(prefix);
                         predicate = func != null
-                                ? el -> func.apply(query, el)
+                                ? el -> func.apply(query, el.render(view, 0))
                                 : createFallbackFilter(input);
                     } else {
                         String query = input.toLowerCase(Locale.ROOT);
@@ -107,6 +118,9 @@ public class MainMenu {
                 })
                 .onClose(view -> {
                     view.getTop().setItem(0, ItemStack.of(Material.AIR));
+                    ItemStack[] clearer = view.getBottom().getContents();
+                    Arrays.fill(clearer, ItemStack.empty());
+                    view.getBottom().setContents(clearer);
                     Player player = (Player) view.getInventoryView().getPlayer();
                     if (INVENTORY_BACKUPS.containsKey(player.getUniqueId())) {
                         player.getInventory().setContents(INVENTORY_BACKUPS.get(player.getUniqueId()));

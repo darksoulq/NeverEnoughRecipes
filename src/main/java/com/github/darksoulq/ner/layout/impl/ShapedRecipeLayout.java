@@ -49,11 +49,7 @@ public class ShapedRecipeLayout extends RecipeLayout<ShapedRecipe> {
                 RecipeChoice choice = ing.get(key);
                 if (choice == null || choice.equals(RecipeChoice.empty())) continue;
 
-                if (choice instanceof RecipeChoice.ExactChoice exact) {
-                    slotMap.put(TARGET_SLOTS[index], exact.getChoices());
-                } else if (choice instanceof RecipeChoice.MaterialChoice mat) {
-                    slotMap.put(TARGET_SLOTS[index], mat.getChoices().stream().map(ItemStack::new).toList());
-                }
+                setItems(slotMap, TARGET_SLOTS[index], choice);
             }
         }
 

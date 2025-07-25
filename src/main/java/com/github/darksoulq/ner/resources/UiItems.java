@@ -12,6 +12,7 @@ public class UiItems {
     public static final DeferredObject<Item> NEXT = register("forward");
     public static final DeferredObject<Item> PREV = register("backward");
     public static final DeferredObject<Item> CLOSE = register("close");
+    public static final DeferredObject<Item> DEFAULT_BOOK = register("book");
 
     public static DeferredObject<Item> register(String name) {
         return ITEMS.register(name, id -> new Item(id, Material.PAPER));

@@ -26,11 +26,7 @@ public class BrewingRecipeLayout extends RecipeLayout<PotionMix> {
         Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
         RecipeChoice base = recipe.getIngredient();
         RecipeChoice inputs = recipe.getInput();
-        if (base instanceof RecipeChoice.ExactChoice be) {
-            slotMap.put(TARGET_SLOTS[0], be.getChoices());
-        } else if (base instanceof RecipeChoice.MaterialChoice bm) {
-            slotMap.put(TARGET_SLOTS[0], bm.getChoices().stream().map(ItemStack::new).toList());
-        }
+        setItems(slotMap, TARGET_SLOTS[0], base);
         if (inputs instanceof RecipeChoice.ExactChoice ie) {
             List<ItemStack> ings = ie.getChoices();
             slotMap.put(TARGET_SLOTS[1], ings);

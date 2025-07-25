@@ -1,16 +1,12 @@
-package com.github.darksoulq.ner;
+package com.github.darksoulq.ner.data;
 
 import com.github.darksoulq.ner.layout.RecipeLayout;
 import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
-import io.papermc.paper.potion.PaperPotionBrewer;
-import net.minecraft.server.MinecraftServer;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
-import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.Recipe;
 
 import java.util.*;
 
@@ -20,8 +16,13 @@ public class RecipeManager {
 
     public static void loadVanillaRecipes() {
         Bukkit.recipeIterator().forEachRemaining(recipe -> {
-            if (recipe instanceof Keyed keyed && IGNORED_RECIPES.contains(keyed.getKey().toString())) return;
+            if (recipe instanceof Keyed keyed) {
+                if (IGNORED_RECIPES.contains(keyed.getKey().toString())) return;
+            }
             if (RecipeLayoutRegistry.hasLayout(recipe.getClass())) {
+                if (recipe.getResult().isSimilar(ItemStack.of(recipe.getResult().getType()))) {
+                    NamespacedFilterManager.addItem("minecraft", recipe.getResult().clone());
+                }
                 recipeMap.computeIfAbsent(recipe.getResult().asOne(), k -> new ArrayList<>()).add(recipe);
             }
         });
@@ -43,6 +44,7 @@ public class RecipeManager {
         return recipeMap.keySet();
     }
 
+    @SuppressWarnings("unchecked")
     public static ParsedRecipeView parse(Object recipe) {
         RecipeLayout layout = RecipeLayoutRegistry.getLayout(recipe.getClass());
         if (layout == null) {
