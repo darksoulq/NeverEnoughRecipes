@@ -10,6 +10,7 @@ import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import com.github.darksoulq.ner.layout.impl.*;
 import com.github.darksoulq.ner.resources.Config;
 import com.github.darksoulq.ner.resources.Pack;
+import com.github.darksoulq.ner.resources.Serializers;
 import com.github.darksoulq.ner.resources.UiItems;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -21,6 +22,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        Serializers.setup();
         LOGGER = getLogger();
         ConfigManager.register(Config.class, ConfigType.YAML);
         Pack.init(this);

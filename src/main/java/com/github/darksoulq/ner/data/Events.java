@@ -39,20 +39,4 @@ public class Events {
         if (!item.equals(UiItems.DEFAULT_BOOK.get())) return;
         GuiManager.open(event.getPlayer(), MainMenu.create());
     }
-
-    @SubscribeEvent
-    public void onPlayerInventoryClick(InventoryClickEvent event) {
-        if (Config.openWith == InputType.NONE) return;
-        if (!(event.getClickedInventory() instanceof PlayerInventory)) return;
-        if (!RecipeManager.getAllItems().contains(event.getCurrentItem())) return;
-        Player player = (Player) event.getWhoClicked();
-        if (!player.isSneaking()) return;
-        if (Config.openWith == InputType.SHIFT_Q) {
-            if (!event.getAction().equals(InventoryAction.DROP_ONE_SLOT)) return;
-        } else {
-            if (!event.getClick().equals(ClickType.SWAP_OFFHAND)) return;
-        }
-        event.setCancelled(true);
-        GuiManager.open(player, RecipeViewer.create(event.getCurrentItem()));
-    }
 }

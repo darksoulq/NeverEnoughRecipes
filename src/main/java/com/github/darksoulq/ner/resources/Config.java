@@ -8,9 +8,6 @@ import com.github.darksoulq.ner.data.InputType;
 
 @ConfigFile(pluginId = "ner")
 public class Config {
-    @ConfigProperty(name = "open_for_item")
-    @Comment(comments = {"which keybind to use for opening an items recipe", "Possible Values: NONE, SHIFT_Q, and SHIFT_F"})
-    public static InputType openWith = InputType.NONE;
 
     @Nest(name = "permissions")
     public static class Permissions {
