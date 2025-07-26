@@ -4,7 +4,6 @@ import com.github.darksoulq.abyssallib.server.config.annotation.Comment;
 import com.github.darksoulq.abyssallib.server.config.annotation.ConfigFile;
 import com.github.darksoulq.abyssallib.server.config.annotation.ConfigProperty;
 import com.github.darksoulq.abyssallib.server.config.annotation.Nest;
-import com.github.darksoulq.ner.data.InputType;
 
 @ConfigFile(pluginId = "ner")
 public class Config {
