@@ -11,13 +11,16 @@ import org.bukkit.inventory.ItemStack;
 import java.util.function.BiFunction;
 
 public class NerApi {
-    public static void registerItem(String namespace, ItemStack result, Object recipe) {
-        RecipeManager.addCustomRecipe(recipe, result);
-        NamespacedFilterManager.addItem(namespace, result);
+    public static void addItem(ItemStack item) {
+        RecipeManager.addItem(item);
+    }
+
+    public static void registerRecipe(ItemStack result, Object recipe) {
+        RecipeManager.addCustomRecipe(recipe, result.asOne());
     }
 
     public static void addItemToNamespace(String namespace, ItemStack item) {
-        NamespacedFilterManager.addItem(namespace, item);
+        NamespacedFilterManager.addItem(namespace, item.asOne());
     }
 
     public static <T> void registerLayout(RecipeLayout<T> layout) {

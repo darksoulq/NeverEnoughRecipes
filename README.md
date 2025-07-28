@@ -48,13 +48,18 @@ Register provider and recipes:
 ```Java
 NerApi.registerLayout(new YourRecipeParser());
 
-NerApi.registerItem("namespace", resultItem, recipeObject);
+NerApi.registerRecipe(recipeObject, resultItem);
 ```
-namespace can be anything, e.g. it could be your plugin name ("myplugin"), (if its a vanilla item its recommend to set namespace to "minecraft")
-
-In case your recipe is from vanilla but the item is a custom item, add it to a namespace as such:
+If its a custom item add it under a namespace:
 ```java
 NerApi.addItemToNamespace("namespace", ItemStack);
+```
+
+namespace can be anything, e.g. it could be your plugin name ("myplugin")
+
+In the case your item has no recipes, add it as such:
+```java
+NerApi.addItem(item);
 ```
 
 In the off chance that you are registering your recipes in bukkit but not allowing crafting in vanilla blocks.
