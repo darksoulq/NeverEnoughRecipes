@@ -7,6 +7,8 @@ import com.github.darksoulq.ner.gui.MainMenu;
 import com.github.darksoulq.ner.gui.RecipeViewer;
 import com.github.darksoulq.ner.resources.Config;
 import com.github.darksoulq.ner.resources.UiItems;
+import com.github.darksoulq.ner.util.CreativeOrder;
+import net.minecraft.server.MinecraftServer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
@@ -21,6 +23,7 @@ public class Events {
     public void onServerLoad(ServerLoadEvent event) {
         if (event.getType() == ServerLoadEvent.LoadType.RELOAD) return;
         RecipeManager.loadVanillaRecipes();
+        CreativeOrder.loadCreativeOrder(MinecraftServer.getServer());
     }
 
     @SubscribeEvent

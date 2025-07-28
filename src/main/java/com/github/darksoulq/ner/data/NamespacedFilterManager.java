@@ -1,6 +1,7 @@
 package com.github.darksoulq.ner.data;
 
 import com.github.darksoulq.ner.gui.MainMenu;
+import com.github.darksoulq.ner.util.CreativeOrder;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
@@ -52,7 +53,7 @@ public class NamespacedFilterManager {
             if (items == null) continue;
 
             Stream<ItemStack> sortedStream = ns.equals("minecraft")
-                    ? items.stream().sorted(Comparator.comparing(i -> i.getType().ordinal()))
+                    ? items.stream().sorted(Comparator.comparing(i -> CreativeOrder.getCreativeOrder(i.getType())))
                     : items.stream().sorted(Comparator.comparing(MainMenu::getItemDisplayName, String.CASE_INSENSITIVE_ORDER));
 
             sortedStream.forEach(item -> {

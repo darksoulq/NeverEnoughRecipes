@@ -12,7 +12,7 @@ import java.util.function.BiFunction;
 
 public class NerApi {
     public static void addItem(ItemStack item) {
-        RecipeManager.addItem(item);
+        RecipeManager.addItem(item.asOne());
     }
 
     public static void registerRecipe(ItemStack result, Object recipe) {

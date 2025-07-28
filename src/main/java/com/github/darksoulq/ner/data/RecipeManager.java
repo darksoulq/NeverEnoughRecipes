@@ -36,7 +36,7 @@ public class RecipeManager {
                 if (IGNORED_RECIPES.contains(keyed.getKey().toString())) return;
             }
             if (RecipeLayoutRegistry.hasLayout(recipe.getClass())) {
-                recipeMap.computeIfAbsent(recipe.getResult(), k -> new ArrayList<>()).add(recipe);
+                NerApi.registerRecipe(recipe.getResult(), recipe);
             }
         });
     }
