@@ -11,7 +11,6 @@ import com.github.darksoulq.ner.layout.impl.*;
 import com.github.darksoulq.ner.resources.Config;
 import com.github.darksoulq.ner.resources.Pack;
 import com.github.darksoulq.ner.resources.UiItems;
-import com.github.darksoulq.ner.util.CreativeOrder;
 import net.minecraft.server.MinecraftServer;
 import org.bukkit.plugin.java.JavaPlugin;
 

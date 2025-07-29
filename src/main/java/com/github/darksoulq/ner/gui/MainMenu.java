@@ -42,12 +42,7 @@ public class MainMenu {
     static {
         addFilter("@", (input, stack) -> {
             List<String> nm =  NamespacedFilterManager.getMatchingNamespaces(input);
-            List<ItemStack> sortedNamespaceItems = NamespacedFilterManager.getAllItemsSorted()
-                    .stream()
-                    .filter(nsItem -> nm.contains(NamespacedFilterManager.getNamespaceOf(nsItem)))
-                    .toList();
-            return sortedNamespaceItems.contains(stack);
-
+            return NamespacedFilterManager.getItemsForNamespaces(nm).contains(stack);
         });
     }
 
@@ -56,7 +51,16 @@ public class MainMenu {
     }
 
     public static Gui create() {
-        List<ItemStack> sorted = NamespacedFilterManager.getAllItemsSorted();
+        List<ItemStack> sorted = new ArrayList<>(RecipeManager.getAllItems());
+
+        PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
+
+        sorted.sort(Comparator.comparing(item -> {
+            Component name = item.getData(DataComponentTypes.CUSTOM_NAME);
+            if (name == null) name = item.getData(DataComponentTypes.ITEM_NAME);
+            if (name == null) name = Component.text("");
+            return plain.serialize(name);
+        }, String.CASE_INSENSITIVE_ORDER));
 
         List<GuiElement> elements = new LinkedList<>();
         for (ItemStack v : sorted) {
@@ -136,12 +140,5 @@ public class MainMenu {
             if (name == null) return false;
             return PlainTextComponentSerializer.plainText().serialize(name).toLowerCase(Locale.ROOT).contains(lowerQuery);
         };
-    }
-
-    public static String getItemDisplayName(ItemStack item) {
-        Component name = item.getData(DataComponentTypes.CUSTOM_NAME);
-        if (name == null) name = item.getData(DataComponentTypes.ITEM_NAME);
-        if (name == null) name = Component.text("");
-        return PlainTextComponentSerializer.plainText().serialize(name);
     }
 }
