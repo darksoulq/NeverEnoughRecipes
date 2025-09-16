@@ -51,6 +51,8 @@ public class Pack {
         createItemDef(ns, "search");
         createItemDef(ns, "filter");
 
+        ns.mcmeta("item/xp", true);
+
         // Lang
         Lang ln = ns.lang("en_us", false);
         ln.put("item.ner.forward", "Forward");
