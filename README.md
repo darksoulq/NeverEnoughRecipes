@@ -1,5 +1,5 @@
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/neverenoughrecipes?style=flat-square&logo=modrinth&link=https%3A%2F%2Fmodrinth.com%2Fplugin%2Fneverenoughrecipes)](https://modrinth.com/plugin/neverenoughrecipes/)[![Spiget Downloads](https://img.shields.io/spiget/downloads/127199?style=flat-square&logo=spigotmc&link=https%3A%2F%2Fwww.spigotmc.org%2Fresources%2Fneverenoughrecipes.127199%2F)](https://www.spigotmc.org/resources/neverenoughrecipes.127199/)[![Discord](https://img.shields.io/discord/1204752282919370812?style=flat-square&logo=discord&link=https%3A%2F%2Fdiscord.gg%2Fe35gP423vN)](https://discord.gg/e35gP423vN)
-<img src="https://drive.google.com/file/d/14PeiRiWigEmiSGYQjnPiP2CPItU3mX7R/view?usp=drivesdk" alt="NerPage" width="100%" height="99%">
+<img src="https://www.dropbox.com/scl/fi/93b6iv40f09cjhocv06hs/nerpage.png?rlkey=ae9g9xj95edr8pq0ib1r7du9m&st=80u17n99&dl=1" alt="NerPage" width="100%" height="99%">
 
 # Credits
 [JEI](https://modrinth.com/mod/jei) For the initial idea and many design choices
