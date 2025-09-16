@@ -4,19 +4,21 @@ import com.github.darksoulq.ner.NerApi;
 import com.github.darksoulq.ner.layout.RecipeLayout;
 import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
-import io.papermc.paper.registry.PaperRegistries;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
-import io.papermc.paper.registry.keys.ItemTypeKeys;
 import io.papermc.paper.registry.tag.Tag;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Keyed;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
 
 import java.util.*;
 
 public class RecipeManager {
-    private static final Map<ItemStack, List<Object>> recipeMap = new HashMap<>();
+    private static final Map<ItemStack, List<Object>> RECIPES = new HashMap<>();
+    private static final Map<ItemStack, List<Object>> USES = new HashMap<>();
     private static final Set<String> IGNORED_RECIPES = new HashSet<>();
 
     public static void loadVanillaRecipes() {
@@ -24,8 +26,6 @@ public class RecipeManager {
         for (Tag<ItemType> tag : typeReg.getTags()) {
             for (ItemType type : tag.resolve(typeReg)) {
                 ItemStack item = type.createItemStack();
-                if (item.getType().equals(Material.POTION) || item.getType().equals(Material.SPLASH_POTION)
-                        || item.getType().equals(Material.LINGERING_POTION)) continue;
                 NerApi.addItem(item);
                 if (!item.isSimilar(ItemStack.of(item.getType()))) continue;
                 NerApi.addItemToNamespace("minecraft", item);
@@ -46,11 +46,23 @@ public class RecipeManager {
             throw new IllegalArgumentException(
                     "No RecipeLayout registered for: " + recipe.getClass().getName());
         }
-        recipeMap.computeIfAbsent(result, k -> new ArrayList<>()).add(recipe);
+        RECIPES.computeIfAbsent(result, k -> new ArrayList<>()).add(recipe);
+        RecipeLayout layout = RecipeLayoutRegistry.getLayout(recipe.getClass());
+        if (layout == null) return;
+        for (Map.Entry<Integer, List<ItemStack>> entry : parse(recipe).getSlotMap().entrySet()) {
+            if (layout.getOutputSlots().contains(entry.getKey())) continue;
+            entry.getValue().forEach(k -> addCustomUse(k, recipe));
+        }
+    }
+
+    public static void addCustomUse(ItemStack used, Object recipe) {
+        List<Object> recipes = USES.computeIfAbsent(used, k -> new ArrayList<>());
+        if (recipes.contains(recipe)) return;
+        recipes.add(recipe);
     }
 
     public static void addItem(ItemStack result) {
-        recipeMap.put(result, new ArrayList<>());
+        RECIPES.put(result, new ArrayList<>());
     }
 
     public static void addIgnoredRecipe(NamespacedKey key) {
@@ -58,7 +70,7 @@ public class RecipeManager {
     }
 
     public static Set<ItemStack> getAllItems() {
-        return recipeMap.keySet();
+        return RECIPES.keySet();
     }
 
     @SuppressWarnings("unchecked")
@@ -72,6 +84,10 @@ public class RecipeManager {
     }
 
     public static List<Object> getRecipesForResult(ItemStack result) {
-        return recipeMap.getOrDefault(result, List.of());
+        return RECIPES.getOrDefault(result, List.of());
+    }
+
+    public static List<Object> getUsesForItem(ItemStack item) {
+        return USES.getOrDefault(item, List.of());
     }
 }

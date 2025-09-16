@@ -1,13 +1,12 @@
 package com.github.darksoulq.ner.data;
 
-import com.github.darksoulq.ner.gui.MainMenu;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 public class NamespacedFilterManager {
     private static final Map<String, List<ItemStack>> NAMESPACED_ITEMS = new HashMap<>();
+    private static final Map<ItemStack, String> NAMESPACE_CACHE = new HashMap<>();
 
     public static void addItem(String namespace, ItemStack item) {
         namespace = namespace.toLowerCase(Locale.ROOT);
@@ -25,12 +24,23 @@ public class NamespacedFilterManager {
         return matching;
     }
 
-    public static List<ItemStack> getItemsForNamespaces(List<String> namespaces) {
+    public static List<ItemStack> getItems(List<String> namespaces) {
         List<ItemStack> result = new ArrayList<>();
         for (String ns : namespaces) {
             List<ItemStack> items = NAMESPACED_ITEMS.get(ns.toLowerCase(Locale.ROOT));
             if (items != null) result.addAll(items);
         }
         return result;
+    }
+
+    public static String getNamespace(ItemStack item) {
+        if (NAMESPACE_CACHE.containsKey(item)) return NAMESPACE_CACHE.get(item);
+        for (Map.Entry<String, List<ItemStack>> entry : NamespacedFilterManager.NAMESPACED_ITEMS.entrySet()) {
+            if (entry.getValue().contains(item)) {
+                NAMESPACE_CACHE.put(item, entry.getKey());
+                return entry.getKey();
+            }
+        }
+        return "zzzzz";
     }
 }

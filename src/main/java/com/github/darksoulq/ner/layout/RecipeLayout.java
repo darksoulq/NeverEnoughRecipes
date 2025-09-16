@@ -6,6 +6,7 @@ import org.bukkit.inventory.RecipeChoice;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * One implementation per recipe‑class type.
@@ -30,4 +31,6 @@ public abstract class RecipeLayout<T> {
             slotMap.put(slot, exact.getChoices());
         }
     }
+
+    public abstract Set<Integer> getOutputSlots();
 }

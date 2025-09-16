@@ -1,6 +1,5 @@
 package com.github.darksoulq.ner.layout.impl;
 
-import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.layout.RecipeLayout;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
 import com.github.darksoulq.ner.resources.Pack;
@@ -9,17 +8,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ShapedRecipeLayout extends RecipeLayout<ShapedRecipe> {
 
     private static final int[] TARGET_SLOTS = {
-            21, 22, 23,
-            30, 31, 32,
-            39, 40, 41
+            11, 12, 13,
+            20, 21, 22,
+            29, 30, 31
     };
 
     @Override
@@ -53,7 +49,12 @@ public class ShapedRecipeLayout extends RecipeLayout<ShapedRecipe> {
             }
         }
 
-        ItemStack display = new ItemStack(Material.CRAFTING_TABLE);
-        return new ParsedRecipeView(slotMap, Pack.CRAFTING_TABLE, -8, display);
+        slotMap.put(24, List.of(recipe.getResult()));
+        return new ParsedRecipeView(slotMap, Pack.CRAFTING_TABLE, -8, new ItemStack(Material.CRAFTING_TABLE));
+    }
+
+    @Override
+    public Set<Integer> getOutputSlots() {
+        return Set.of(24);
     }
 }

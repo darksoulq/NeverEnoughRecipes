@@ -11,10 +11,11 @@ import org.bukkit.inventory.SmithingTransformRecipe;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class SmithingTransformRecipeLayout extends RecipeLayout<SmithingTransformRecipe> {
     private static final int[] TARGET_SLOTS = {
-            30, 31, 32
+            20, 21, 22, 24
     };
     @Override
     public Class<SmithingTransformRecipe> getRecipeClass() {
@@ -31,7 +32,13 @@ public class SmithingTransformRecipeLayout extends RecipeLayout<SmithingTransfor
         setItems(slotMap, TARGET_SLOTS[0], template);
         setItems(slotMap, TARGET_SLOTS[1], base);
         setItems(slotMap, TARGET_SLOTS[2], addition);
+        slotMap.put(TARGET_SLOTS[3], List.of(recipe.getResult()));
 
-        return new ParsedRecipeView(slotMap, Pack.THREE_SLOT, -8, ItemStack.of(Material.SMITHING_TABLE));
+        return new ParsedRecipeView(slotMap, Pack.SMITHING, -8, ItemStack.of(Material.SMITHING_TABLE));
+    }
+
+    @Override
+    public Set<Integer> getOutputSlots() {
+        return Set.of(24);
     }
 }

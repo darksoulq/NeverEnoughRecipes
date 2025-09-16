@@ -2,7 +2,7 @@ package com.github.darksoulq.ner;
 
 import com.github.darksoulq.ner.data.NamespacedFilterManager;
 import com.github.darksoulq.ner.data.RecipeManager;
-import com.github.darksoulq.ner.gui.MainMenu;
+import com.github.darksoulq.ner.gui.SearchMenu;
 import com.github.darksoulq.ner.layout.RecipeLayout;
 import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import org.bukkit.NamespacedKey;
@@ -32,6 +32,6 @@ public class NerApi {
     }
 
     public static void registerMenuFilter(String prefix, BiFunction<String, ItemStack, Boolean> filter) {
-        MainMenu.addFilter(prefix, filter);
+        SearchMenu.addFilter(prefix, filter);
     }
 }

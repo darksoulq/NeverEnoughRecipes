@@ -4,24 +4,21 @@ import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.layout.RecipeLayout;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
 import com.github.darksoulq.ner.resources.Pack;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapelessRecipe;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ShapelessRecipeLayout extends RecipeLayout<ShapelessRecipe> {
     private static final int[] TARGET_SLOTS = {
-            21, 22, 23,
-            30, 31, 32,
-            39, 40, 41
+            11, 12, 13,
+            20, 21, 22,
+            29, 30, 31
     };
 
     @Override
@@ -47,8 +44,13 @@ public class ShapelessRecipeLayout extends RecipeLayout<ShapelessRecipe> {
             setItems(slotMap, slot, choice);
         }
 
-        ItemStack display = new ItemStack(Material.CRAFTING_TABLE);
+        slotMap.put(24, List.of(recipe.getResult()));
 
-        return new ParsedRecipeView(slotMap, Pack.CRAFTING_TABLE, -8, display);
+        return new ParsedRecipeView(slotMap, Pack.CRAFTING_TABLE, -8, new ItemStack(Material.CRAFTING_TABLE));
+    }
+
+    @Override
+    public Set<Integer> getOutputSlots() {
+        return Set.of(24);
     }
 }

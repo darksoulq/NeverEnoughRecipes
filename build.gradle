@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.github.darksoulq'
-version = '0.3.0'
+version = '0.4.0'
 
 repositories {
     mavenCentral()
@@ -23,7 +23,7 @@ repositories {
 
 dependencies {
     paperweight.paperDevBundle('1.21.7-R0.1-SNAPSHOT')
-    implementation('com.github.darksoulq:AbyssalLib:v1.3.4-mc1.21.7')
+    implementation('com.github.darksoulq:AbyssalLib:v1.5.0-mc1.21.8')
 }
 
 tasks {

@@ -10,69 +10,70 @@ import com.github.darksoulq.abyssallib.server.resource.asset.definition.Selector
 import com.github.darksoulq.ner.NeverEnoughRecipes;
 
 public class Pack {
-    public static Texture MAIN_MENU_TEXTURE;
-    public static Texture CRAFTING_TABLE_TEXTURE;
-    public static Texture COOKING_TEXTURE;
-    public static Texture BREWING_TEXTURE;
-    public static Texture ONE_SLOT_TEXTURE;
-    public static Texture THREE_SLOT_TEXTURE;
-
     public static Font.TextureGlyph MAIN_MENU;
+    public static Font.TextureGlyph MAIN_MENU_INV;
+    public static Font.TextureGlyph SEARCH_MENU;
     public static Font.TextureGlyph CRAFTING_TABLE;
     public static Font.TextureGlyph COOKING;
     public static Font.TextureGlyph BREWING;
-    public static Font.TextureGlyph ONE_SLOT;
-    public static Font.TextureGlyph THREE_SLOT;
+    public static Font.TextureGlyph STONE_CUTTER;
+    public static Font.TextureGlyph SMITHING;
 
     public static void init(NeverEnoughRecipes pl) {
         ResourcePack pack = new ResourcePack(pl, NeverEnoughRecipes.MODID);
         Namespace ns = pack.namespace("ner");
 
-        MAIN_MENU_TEXTURE = ns.texture("gui/main_menu");
-        CRAFTING_TABLE_TEXTURE = ns.texture("gui/crafting_table");
-        COOKING_TEXTURE = ns.texture("gui/cooking");
-        BREWING_TEXTURE = ns.texture("gui/brewing_stand");
-        ONE_SLOT_TEXTURE = ns.texture("gui/one_slot");
-        THREE_SLOT_TEXTURE = ns.texture("gui/three_slot");
+        Texture MAIN_MENU_TEXTURE = ns.texture("gui/main");
+        Texture MAIN_MENU_INV_TEXTURE = ns.texture("gui/main_inv");
+        Texture SEARCH_MENU_TEXTURE = ns.texture("gui/search_menu");
+        Texture CRAFTING_TABLE_TEXTURE = ns.texture("gui/crafting");
+        Texture COOKING_TEXTURE = ns.texture("gui/cooking");
+        Texture BREWING_TEXTURE = ns.texture("gui/brewing");
+        Texture STONE_CUTTER_TEXTURE = ns.texture("gui/stone_cutter");
+        Texture SMITHING_TEXTURE = ns.texture("gui/smithing");
 
         Font fn = ns.font("gui", false);
-        MAIN_MENU = fn.glyph(MAIN_MENU_TEXTURE, 165, 13);
-        CRAFTING_TABLE = fn.glyph(CRAFTING_TABLE_TEXTURE, 128, 13);
-        COOKING = fn.glyph(COOKING_TEXTURE, 128, 13);
-        BREWING = fn.glyph(BREWING_TEXTURE, 128, 13);
-        ONE_SLOT = fn.glyph(ONE_SLOT_TEXTURE, 128, 13);
-        THREE_SLOT = fn.glyph(THREE_SLOT_TEXTURE, 128, 13);
+        MAIN_MENU = fn.glyph(MAIN_MENU_TEXTURE, 222, 13);
+        MAIN_MENU_INV = fn.glyph(MAIN_MENU_INV_TEXTURE, 222, 13);
+        SEARCH_MENU = fn.glyph(SEARCH_MENU_TEXTURE, 165, 13);
+        CRAFTING_TABLE = fn.glyph(CRAFTING_TABLE_TEXTURE, 222, 13);
+        COOKING = fn.glyph(COOKING_TEXTURE, 222, 13);
+        BREWING = fn.glyph(BREWING_TEXTURE, 222, 13);
+        STONE_CUTTER = fn.glyph(STONE_CUTTER_TEXTURE, 222, 13);
+        SMITHING = fn.glyph(SMITHING_TEXTURE, 222, 13);
 
         // Items
-        Texture next = ns.texture("item/forward");
-        Texture prev = ns.texture("item/backward");
-        Texture close = ns.texture("item/close");
-
-        Model nextModel = ns.model("forward", false);
-        nextModel.parent("minecraft:item/generated");
-        nextModel.texture("layer0", next);
-        Model prevModel = ns.model("backward", false);
-        prevModel.parent("minecraft:item/generated");
-        prevModel.texture("layer0", prev);
-        Model closeModel = ns.model("close", false);
-        closeModel.parent("minecraft:item/generated");
-        closeModel.texture("layer0", close);
-
-        Selector.Model nextSel = new Selector.Model(nextModel);
-        Selector.Model prevSel = new Selector.Model(prevModel);
-        Selector.Model closeSel = new Selector.Model(closeModel);
-
-        ns.itemDefinition("forward", nextSel, false);
-        ns.itemDefinition("backward", prevSel, false);
-        ns.itemDefinition("close", closeSel, false);
+        createItemDef(ns, "forward");
+        createItemDef(ns, "backward");
+        createItemDef(ns, "close");
+        createItemDef(ns, "xp");
+        createItemDef(ns, "book");
+        createItemDef(ns, "search");
+        createItemDef(ns, "filter");
 
         // Lang
         Lang ln = ns.lang("en_us", false);
         ln.put("item.ner.forward", "Forward");
         ln.put("item.ner.backward", "Backward");
         ln.put("item.ner.close", "Close");
+        ln.put("item.ner.xp", "Experience");
         ln.put("item.ner.book", "Never Enough Recipes");
+        ln.put("item.ner.search", "Search");
+        ln.put("item.ner.filter", "Mode");
+
+        ln.put("lore.ner.recent", "Recents");
+        ln.put("lore.ner.inventory", "Inventory");
+        ln.put("lore.ner.favourite", "Favourites");
 
         pack.register(false);
+    }
+
+    private static void createItemDef(Namespace ns, String name) {
+        Texture tex = ns.texture("item/" + name);
+        Model mod = ns.model(name, false);
+        mod.parent("minecraft:item/generated");
+        mod.texture("layer0", tex);
+        Selector.Model sel = new Selector.Model(mod);
+        ns.itemDefinition(name, sel, true);
     }
 }
