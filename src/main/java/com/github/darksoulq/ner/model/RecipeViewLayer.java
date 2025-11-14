@@ -1,23 +1,22 @@
 package com.github.darksoulq.ner.model;
 
-import com.github.darksoulq.abyssallib.world.gui.Gui;
-import com.github.darksoulq.abyssallib.world.gui.GuiLayer;
-import com.github.darksoulq.abyssallib.world.gui.GuiView;
-import com.github.darksoulq.abyssallib.world.gui.SlotPosition;
+import com.github.darksoulq.abyssallib.world.gui.*;
 import com.github.darksoulq.abyssallib.world.gui.impl.GuiAnimatedItem;
+import com.github.darksoulq.abyssallib.world.gui.impl.GuiButton;
+import com.github.darksoulq.abyssallib.world.gui.impl.PaginatedElements;
 import com.github.darksoulq.ner.data.Input;
 import com.github.darksoulq.ner.gui.GuiInfo;
 import com.github.darksoulq.ner.gui.MainMenu;
 import com.github.darksoulq.ner.gui.RecipeViewer;
+import com.github.darksoulq.ner.layout.PaginatedSection;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class RecipeViewLayer implements GuiLayer {
     public final ParsedRecipeView view;
-    private final Map<SlotPosition, GuiAnimatedItem> items = new HashMap<>();
+    private final Map<SlotPosition, GuiElement> items = new HashMap<>();
+    private final List<PaginatedElements> pages = new ArrayList<>();
     private int lastTime = 0;
 
     public RecipeViewLayer(ParsedRecipeView view, GuiInfo info) {
@@ -28,24 +27,21 @@ public class RecipeViewLayer implements GuiLayer {
             List<ItemStack> stackList = entry.getValue();
             SlotPosition position = SlotPosition.top(slot);
 
-            GuiAnimatedButton animated = new GuiAnimatedButton((gView, currentTick) -> {
-                if (lastTime == 0) lastTime = currentTick;
-                int elapsed = currentTick - lastTime;
-
-                if (stackList.isEmpty()) return null;
-                int index = (elapsed / 20) % stackList.size();
-                return stackList.get(index);
-            }, (gv, type, cursor, current) -> {
-                if (!type.isShiftClick() && type.isLeftClick()) {
-                    MainMenu.openRecipe(gv, current, info, RecipeViewer.RecipeType.RECIPE);
-                } else if (type.isRightClick()) {
-                    MainMenu.openRecipe(gv, current, info, RecipeViewer.RecipeType.USE);
-                } else if (Input.isShiftLeftClick(type)) {
-                    MainMenu.addFavourite(gv.getInventoryView().getPlayer().getUniqueId(), current);
-                }
-            });
+            GuiElement animated = createButton(stackList, info, true);
 
             items.put(position, animated);
+        }
+
+        if (view.getSections() == null) return;
+        for (PaginatedSection section : view.getSections()) {
+            List<GuiElement> elements = new ArrayList<>();
+            section.getStacks().forEach(v -> elements.add(createButton(List.of(v), info, false)));
+            PaginatedElements page = new PaginatedElements(elements, section.getSlots(), GuiView.Segment.TOP);
+
+            items.put(SlotPosition.top(section.getNextButton().slot()), GuiButton.of(section.getNextButton().display(),
+                    (gView, click) -> page.next(gView)));
+            items.put(SlotPosition.top(section.getPrevButton().slot()), GuiButton.of(section.getPrevButton().display(),
+                    (gView, click) -> page.prev(gView)));
         }
     }
 
@@ -59,18 +55,52 @@ public class RecipeViewLayer implements GuiLayer {
                 view.getBottom().setItem(sp.index(), null);
             }
         });
+        for (PaginatedElements elements : pages) {
+            elements.cleanup(view);
+        }
     }
 
     @Override
-    public void renderTo(GuiView guiView) {
-        Gui gui = guiView.getGui();
+    public void renderTo(GuiView view) {
+        Gui gui = view.getGui();
+        cleanup(view);
 
-        for (SlotPosition pos : items.keySet()) {
-            gui.getElements().remove(pos);
+        for (PaginatedElements element : pages) {
+            element.renderTo(view);
         }
-
-        for (Map.Entry<SlotPosition, GuiAnimatedItem> entry : items.entrySet()) {
+        for (Map.Entry<SlotPosition, GuiElement> entry : items.entrySet()) {
             gui.getElements().put(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private GuiElement createButton(List<ItemStack> stacks, GuiInfo info, boolean animated) {
+        if (animated) {
+            return new GuiAnimatedButton((gView, currentTick) -> {
+                if (lastTime == 0) lastTime = currentTick;
+                int elapsed = currentTick - lastTime;
+
+                if (stacks.isEmpty()) return null;
+                int index = (elapsed / 20) % stacks.size();
+                return stacks.get(index);
+            }, (gv, type, cursor, current) -> {
+                if (!type.isShiftClick() && type.isLeftClick()) {
+                    MainMenu.openRecipe(gv, current, info, RecipeViewer.RecipeType.RECIPE);
+                } else if (type.isRightClick()) {
+                    MainMenu.openRecipe(gv, current, info, RecipeViewer.RecipeType.USE);
+                } else if (Input.isShiftLeftClick(type)) {
+                    MainMenu.addFavourite(gv.getInventoryView().getPlayer().getUniqueId(), current);
+                }
+            });
+        } else {
+            return new GuiButton(stacks.getFirst(), (gv, type) -> {
+                if (!type.isShiftClick() && type.isLeftClick()) {
+                    MainMenu.openRecipe(gv, stacks.getFirst(), info, RecipeViewer.RecipeType.RECIPE);
+                } else if (type.isRightClick()) {
+                    MainMenu.openRecipe(gv, stacks.getFirst(), info, RecipeViewer.RecipeType.USE);
+                } else if (Input.isShiftLeftClick(type)) {
+                    MainMenu.addFavourite(gv.getInventoryView().getPlayer().getUniqueId(), stacks.getFirst());
+                }
+            });
         }
     }
 }

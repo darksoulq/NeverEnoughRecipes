@@ -137,17 +137,17 @@ public class MainMenu {
                 .set(SlotPosition.top(45), GuiButton.of(FILTER_ITEMS.get(info.filter), (view, clickType) -> {
                     switch (info.filter) {
                         case RECENT -> {
-                            GuiManager.close(view.getInventoryView().getPlayer());
+                            GuiManager.openViews.remove(view.getInventoryView());
                             GuiManager.open(view.getInventoryView().getPlayer(), create(new
                                     GuiInfo.Main(info.page, info.favouritesPage, FilterType.INVENTORY)));
                         }
                         case INVENTORY -> {
-                            GuiManager.close(view.getInventoryView().getPlayer());
+                            GuiManager.openViews.remove(view.getInventoryView());
                             GuiManager.open(view.getInventoryView().getPlayer(), create(new
                                     GuiInfo.Main(info.page, info.favouritesPage, FilterType.FAVOURITE)));
                         }
                         case FAVOURITE -> {
-                            GuiManager.close(view.getInventoryView().getPlayer());
+                            GuiManager.openViews.remove(view.getInventoryView());
                             GuiManager.open(view.getInventoryView().getPlayer(), create(new
                                     GuiInfo.Main(info.page, info.favouritesPage, FilterType.RECENT)));
                         }
@@ -161,7 +161,7 @@ public class MainMenu {
                 ))
                 .set(SlotPosition.top(49), GuiButton.of(
                         UiItems.SEARCH.get().getStack(), (view, clickType) -> {
-                            GuiManager.close(view.getInventoryView().getPlayer());
+                            GuiManager.openViews.remove(view.getInventoryView());
                             GuiManager.open(view.getInventoryView().getPlayer(), SearchMenu.create());
                         })
                 )
@@ -308,7 +308,7 @@ public class MainMenu {
         if (type.equals(RecipeViewer.RecipeType.RECIPE) && RecipeManager.getRecipesForResult(item).isEmpty()) return;
 
         HumanEntity player = view.getInventoryView().getPlayer();
-        GuiManager.close(player);
+        GuiManager.openViews.remove(view.getInventoryView());
         if (!(info instanceof GuiInfo.Search)) GuiHistory.push(player.getUniqueId(), info);
         addToRecents(player.getUniqueId(), item);
         GuiManager.open(player, RecipeViewer.create(item, 0, type));

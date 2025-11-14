@@ -139,14 +139,14 @@ public class RecipeViewer {
                             GuiInfo prev = GuiHistory.pop(player.getUniqueId());
                             switch (prev) {
                                 case GuiInfo.Main m -> {
-                                    GuiManager.close(player);
+                                    GuiManager.openViews.remove(view.getInventoryView());
                                     GuiManager.open(player, MainMenu.create(m));
                                 }
                                 case GuiInfo.Search s -> {
                                     GuiManager.close(player);
                                 }
                                 case GuiInfo.Recipe r -> {
-                                    GuiManager.close(player);
+                                    GuiManager.openViews.remove(view.getInventoryView());
                                     GuiManager.open(player, create(r.viewed, r.page, r.type, r.provider));
                                 }
                                 case null, default -> {
