@@ -20,7 +20,7 @@ public class Pack {
     public static Font.TextureGlyph SMITHING;
 
     public static void init(NeverEnoughRecipes pl) {
-        ResourcePack pack = new ResourcePack(pl, NeverEnoughRecipes.MODID);
+        ResourcePack pack = new ResourcePack(pl, NeverEnoughRecipes.PLUGIN_ID);
         Namespace ns = pack.namespace("ner");
 
         Texture MAIN_MENU_TEXTURE = ns.texture("gui/main");

@@ -4,7 +4,6 @@ import com.github.darksoulq.abyssallib.server.command.CommandBus;
 import com.github.darksoulq.abyssallib.server.event.EventBus;
 import com.github.darksoulq.ner.data.Events;
 import com.github.darksoulq.ner.data.InternalCommands;
-import com.github.darksoulq.ner.gui.MainMenu;
 import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import com.github.darksoulq.ner.layout.impl.*;
 import com.github.darksoulq.ner.resources.Pack;
@@ -13,13 +12,12 @@ import com.github.darksoulq.ner.resources.PluginConfig;
 import com.github.darksoulq.ner.resources.UiItems;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.IOException;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public final class NeverEnoughRecipes extends JavaPlugin {
     public static NeverEnoughRecipes INSTANCE;
-    public static final String MODID = "ner";
+    public static final String PLUGIN_ID = "ner";
     public static Logger LOGGER;
     private static PluginConfig CONFIG;
     private static PlayerPref PREFS;
@@ -34,7 +32,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
         PREFS.cfg.save();
         Pack.init(this);
         registerDefaults();
-        CommandBus.register(MODID, new InternalCommands());
+        CommandBus.register(PLUGIN_ID, new InternalCommands());
         EventBus bus = new EventBus(this);
         bus.register(new Events());
 
