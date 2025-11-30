@@ -37,6 +37,7 @@ public class RecipeViewLayer implements GuiLayer {
             List<GuiElement> elements = new ArrayList<>();
             section.getStacks().forEach(v -> elements.add(createButton(List.of(v), info, false)));
             PaginatedElements page = new PaginatedElements(elements, section.getSlots(), GuiView.Segment.TOP);
+            pages.add(page);
 
             items.put(SlotPosition.top(section.getNextButton().slot()), GuiButton.of(section.getNextButton().display(),
                     (gView, click) -> page.next(gView)));
@@ -57,6 +58,7 @@ public class RecipeViewLayer implements GuiLayer {
         });
         for (PaginatedElements elements : pages) {
             elements.cleanup(view);
+            elements.resetPage();
         }
     }
 

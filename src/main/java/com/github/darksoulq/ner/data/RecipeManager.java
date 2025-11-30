@@ -56,7 +56,7 @@ public class RecipeManager {
     }
 
     public static void addCustomUse(ItemStack used, Object recipe) {
-        List<Object> recipes = USES.computeIfAbsent(used, k -> new ArrayList<>());
+        List<Object> recipes = USES.computeIfAbsent(used.asOne(), k -> new ArrayList<>());
         if (recipes.contains(recipe)) return;
         recipes.add(recipe);
     }

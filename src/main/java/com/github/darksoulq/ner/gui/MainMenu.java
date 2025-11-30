@@ -138,16 +138,19 @@ public class MainMenu {
                     switch (info.filter) {
                         case RECENT -> {
                             GuiManager.openViews.remove(view.getInventoryView());
+                            MainMenu.loadBackup(view);
                             GuiManager.open(view.getInventoryView().getPlayer(), create(new
                                     GuiInfo.Main(info.page, info.favouritesPage, FilterType.INVENTORY)));
                         }
                         case INVENTORY -> {
                             GuiManager.openViews.remove(view.getInventoryView());
+                            MainMenu.loadBackup(view);
                             GuiManager.open(view.getInventoryView().getPlayer(), create(new
                                     GuiInfo.Main(info.page, info.favouritesPage, FilterType.FAVOURITE)));
                         }
                         case FAVOURITE -> {
                             GuiManager.openViews.remove(view.getInventoryView());
+                            MainMenu.loadBackup(view);
                             GuiManager.open(view.getInventoryView().getPlayer(), create(new
                                     GuiInfo.Main(info.page, info.favouritesPage, FilterType.RECENT)));
                         }
@@ -162,6 +165,7 @@ public class MainMenu {
                 .set(SlotPosition.top(49), GuiButton.of(
                         UiItems.SEARCH.get().getStack(), (view, clickType) -> {
                             GuiManager.openViews.remove(view.getInventoryView());
+                            MainMenu.loadBackup(view);
                             GuiManager.open(view.getInventoryView().getPlayer(), SearchMenu.create());
                         })
                 )
@@ -277,41 +281,46 @@ public class MainMenu {
         if (info instanceof GuiInfo.Search s) s.page = elements.getPage();
     }
     public static void addToRecents(UUID uuid, ItemStack viewed) {
+        ItemStack one = viewed.asOne();
         NeverEnoughRecipes.updatePrefs(p -> {
             Map<String, List<ItemStack>> map = new HashMap<>(p.recents.get());
             List<ItemStack> recents = map.computeIfAbsent(uuid.toString(), k -> new LinkedList<>());
-            recents.removeIf(s -> s.isSimilar(viewed));
-            recents.addFirst(viewed.clone());
+            recents.removeIf(s -> s.isSimilar(one));
+            recents.addFirst(one.clone());
             while (recents.size() > 15) recents.removeLast();
             p.recents.set(map);
         });
     }
     public static void addFavourite(UUID uuid, ItemStack item) {
+        ItemStack one = item.asOne();
         NeverEnoughRecipes.updatePrefs(p -> {
             Map<String, List<ItemStack>> map = new HashMap<>(p.favourites.get());
             List<ItemStack> favourites = map.computeIfAbsent(uuid.toString(), k -> new LinkedList<>());
-            if (favourites.contains(item)) return;
-            favourites.add(item);
+            if (favourites.contains(one)) return;
+            favourites.add(one);
             p.favourites.set(map);
         });
     }
     public static void removeFavourite(UUID uuid, ItemStack item) {
+        ItemStack one = item.asOne();
         NeverEnoughRecipes.updatePrefs(p -> {
             Map<String, List<ItemStack>> map = new HashMap<>(p.favourites.get());
             List<ItemStack> favourites = map.computeIfAbsent(uuid.toString(), k -> new LinkedList<>());
-            favourites.remove(item);
+            favourites.remove(one);
             p.favourites.set(map);
         });
     }
     public static void openRecipe(GuiView view, ItemStack item, GuiInfo info, RecipeViewer.RecipeType type) {
-        if (type.equals(RecipeViewer.RecipeType.USE) && RecipeManager.getUsesForItem(item).isEmpty()) return;
-        if (type.equals(RecipeViewer.RecipeType.RECIPE) && RecipeManager.getRecipesForResult(item).isEmpty()) return;
+        ItemStack one = item.asOne();
+        if (type.equals(RecipeViewer.RecipeType.USE) && RecipeManager.getUsesForItem(one).isEmpty()) return;
+        if (type.equals(RecipeViewer.RecipeType.RECIPE) && RecipeManager.getRecipesForResult(one).isEmpty()) return;
 
         HumanEntity player = view.getInventoryView().getPlayer();
         GuiManager.openViews.remove(view.getInventoryView());
         if (!(info instanceof GuiInfo.Search)) GuiHistory.push(player.getUniqueId(), info);
-        addToRecents(player.getUniqueId(), item);
-        GuiManager.open(player, RecipeViewer.create(item, 0, type));
+        addToRecents(player.getUniqueId(), one);
+        MainMenu.loadBackup(view);
+        GuiManager.open(player, RecipeViewer.create(one, 0, type));
     }
 
     public static List<ItemStack> sortDisplay(List<ItemStack> items) {

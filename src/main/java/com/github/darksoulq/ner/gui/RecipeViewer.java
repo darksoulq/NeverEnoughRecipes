@@ -98,8 +98,10 @@ public class RecipeViewer {
                                 Placeholder.parsed("title", rview.getTexture().toMiniMessageString()),
                                 Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(rview.getOffset())),
                                 Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
-                                Placeholder.parsed("type", type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
+                                Placeholder.parsed("type", info.type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
                                 Placeholder.component("itemname", itemName.get()));
+                        GuiManager.openViews.remove(view.getInventoryView());
+                        MainMenu.loadBackup(view);
                         Gui gui = create(newTitle, layers, new GuiInfo.Recipe(info.page, info.type, k, info.viewed));
                         GuiManager.open(view.getInventoryView().getPlayer(), gui);
                     });
@@ -128,7 +130,7 @@ public class RecipeViewer {
                 .set(SlotPosition.top(48), GuiButton.of(
                         UiItems.PREV.get().getStack(),
                         (view, type) -> {
-                            listedLayers.prev(view);
+                            if (listedLayers.getSize() != 1) listedLayers.prev(view);
                             updatePageItem(listedLayers, pageDisplay, info);
                         }))
                 .set(SlotPosition.top(49), GuiItem.of(pageDisplay))
@@ -140,6 +142,7 @@ public class RecipeViewer {
                             switch (prev) {
                                 case GuiInfo.Main m -> {
                                     GuiManager.openViews.remove(view.getInventoryView());
+                                    MainMenu.loadBackup(view);
                                     GuiManager.open(player, MainMenu.create(m));
                                 }
                                 case GuiInfo.Search s -> {
@@ -147,6 +150,7 @@ public class RecipeViewer {
                                 }
                                 case GuiInfo.Recipe r -> {
                                     GuiManager.openViews.remove(view.getInventoryView());
+                                    MainMenu.loadBackup(view);
                                     GuiManager.open(player, create(r.viewed, r.page, r.type, r.provider));
                                 }
                                 case null, default -> {
@@ -156,7 +160,7 @@ public class RecipeViewer {
                 .set(SlotPosition.top(50), GuiButton.of(
                         UiItems.NEXT.get().getStack(),
                         (view, type) -> {
-                            listedLayers.next(view);
+                            if (listedLayers.getSize() != 1) listedLayers.next(view);
                             updatePageItem(listedLayers, pageDisplay, info);
                         }))
                 .onOpen(view -> {
