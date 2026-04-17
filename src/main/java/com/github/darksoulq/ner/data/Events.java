@@ -26,7 +26,7 @@ public class Events {
         if (!NeverEnoughRecipes.config().book.onJoin.get()) return;
         Player player = event.getPlayer();
         if (player.hasPlayedBefore()) return;
-        player.getInventory().addItem(UiItems.DEFAULT_BOOK.get().getStack().clone());
+        player.getInventory().addItem(UiItems.DEFAULT_BOOK.getStack().clone());
     }
 
     @SubscribeEvent
@@ -34,7 +34,7 @@ public class Events {
         if (!event.getAction().isRightClick()) return;
         Item item = Item.resolve(event.getItem());
         if (item == null) return;
-        if (!item.equals(UiItems.DEFAULT_BOOK.get())) return;
+        if (!item.equals(UiItems.DEFAULT_BOOK)) return;
         if (!event.getPlayer().hasPermission(NeverEnoughRecipes.config().perms.openGui.get())) return;
         GuiManager.open(event.getPlayer(), SearchMenu.create());
     }

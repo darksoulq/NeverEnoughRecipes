@@ -2,9 +2,9 @@ package com.github.darksoulq.ner.gui;
 
 import com.github.darksoulq.abyssallib.server.resource.util.TextOffset;
 import com.github.darksoulq.abyssallib.world.gui.*;
-import com.github.darksoulq.abyssallib.world.gui.impl.GuiButton;
-import com.github.darksoulq.abyssallib.world.gui.impl.GuiItem;
-import com.github.darksoulq.abyssallib.world.gui.impl.PaginatedElements;
+import com.github.darksoulq.abyssallib.world.gui.element.GuiButton;
+import com.github.darksoulq.abyssallib.world.gui.element.GuiItem;
+import com.github.darksoulq.abyssallib.world.gui.layer.PagedLayer;
 import com.github.darksoulq.abyssallib.world.item.Items;
 import com.github.darksoulq.ner.data.NamespacedFilterManager;
 import com.github.darksoulq.ner.resources.Pack;
@@ -13,33 +13,29 @@ import com.github.darksoulq.ner.util.TextUtil;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MenuType;
 import org.bukkit.inventory.view.AnvilView;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 public class SearchMenu {
     private static final Map<String, BiFunction<String, ItemStack, Boolean>> FILTERS = new HashMap<>();
     private static final Component MENU_TITLE = TextUtil.parse(
-            "<white><offset><title></white><width>Search",
-            Placeholder.parsed("title", Pack.SEARCH_MENU.toMiniMessageString()),
-            Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(-60)),
-            Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-170))
+        "<white><offset><title></white><width>Search",
+        Placeholder.parsed("title", Pack.SEARCH_MENU.toMiniMessageString()),
+        Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(-60)),
+        Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-170))
     );
 
     private static final int[] DISPLAY_SLOTS = {
-            9, 10, 11, 12, 13, 14, 15, 16, 17,
-            18, 19, 20, 21, 22, 23, 24, 25, 26,
-            27, 28, 29, 30, 31, 32, 33, 34, 35
+        9, 10, 11, 12, 13, 14, 15, 16, 17,
+        18, 19, 20, 21, 22, 23, 24, 25, 26,
+        27, 28, 29, 30, 31, 32, 33, 34, 35
     };
 
     static {
@@ -58,15 +54,15 @@ public class SearchMenu {
     }
 
     public static Gui create(GuiInfo.Search info) {
-        List<GuiElement> guiElements = new ArrayList<>(MainMenu.ITEMS.size());
+        List<GuiElement> guiElements = new ArrayList<>();
         MainMenu.populateElements(guiElements, info);
 
-        PaginatedElements paginatedElements = new PaginatedElements(guiElements, DISPLAY_SLOTS, GuiView.Segment.BOTTOM);
+        PagedLayer<GuiElement> paginatedElements = PagedLayer.of(guiElements, DISPLAY_SLOTS, GuiView.Segment.BOTTOM);
 
         Predicate<GuiElement> initialFilter = buildFilterPredicate(info.text, null);
         paginatedElements.setFilter(initialFilter);
 
-        ItemStack invisibleFiller = Items.INVISIBLE_ITEM.get().getStack();
+        ItemStack invisibleFiller = Items.INVISIBLE_ITEM.getStack();
         invisibleFiller.setData(DataComponentTypes.ITEM_NAME, Component.text(""));
         invisibleFiller.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
 
@@ -74,35 +70,43 @@ public class SearchMenu {
         MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
 
         return new Gui.Builder(MenuType.ANVIL, MENU_TITLE)
-                .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
-                .addLayer(paginatedElements)
-                .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.get().getStack(), (view, click) -> {
-                    paginatedElements.prev(view);
-                    MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
-                }))
-                .set(SlotPosition.bottom(4), new GuiItem(pageIndicator))
-                .set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.get().getStack(), (view, click) -> {
-                    paginatedElements.next(view);
-                    MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
-                }))
-                .set(SlotPosition.top(0), new GuiItem(invisibleFiller))
-                .onOpen(MainMenu::setupBackup)
-                .onTick(view -> {
-                    if (!(view.getInventoryView() instanceof AnvilView anvilView)) {
-                        return;
-                    }
+            .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
+            .addLayer(paginatedElements)
+            .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.getStack(), (ctx) -> {
+                paginatedElements.previous(ctx.view());
+                paginatedElements.renderTo(ctx.view());
+                MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
+            }))
+            .set(SlotPosition.bottom(4), new GuiItem(pageIndicator))
+            .set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.getStack(), (ctx) -> {
+                paginatedElements.next(ctx.view());
+                paginatedElements.renderTo(ctx.view());
+                MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
+            }))
+            .set(SlotPosition.top(0), new GuiItem(invisibleFiller))
+            .onOpen(MainMenu::setupBackup)
+            .onTick(view -> {
+                if (!(view.getInventoryView() instanceof AnvilView anvilView)) {
+                    return;
+                }
 
-                    String currentInput = Optional.ofNullable(anvilView.getRenameText()).orElse("");
-                    boolean isOld = info.text.equals(currentInput);
+                String currentInput = Optional.ofNullable(anvilView.getRenameText()).orElse("");
+                boolean isOld = info.text.equals(currentInput);
 
-                    if (isOld) return;
-                    info.text = currentInput;
+                if (isOld) return;
+                info.text = currentInput;
 
-                    Predicate<GuiElement> filterPredicate = buildFilterPredicate(info.text, view);
-                    paginatedElements.setFilter(filterPredicate);
-                })
-                .onClose(MainMenu::loadBackup)
-                .build();
+                Predicate<GuiElement> filterPredicate = buildFilterPredicate(info.text, view);
+                paginatedElements.setFilter(filterPredicate);
+                paginatedElements.renderTo(view);
+                MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
+            })
+            .onClose(view -> {
+                if (!GuiManager.OPEN_VIEWS.containsKey(view.getInventoryView())) {
+                    MainMenu.loadBackup(view);
+                }
+            })
+            .build();
     }
 
     private static Predicate<GuiElement> buildFilterPredicate(String input, GuiView view) {
@@ -115,14 +119,14 @@ public class SearchMenu {
             if (filterFunc != null) {
                 return element -> {
                     ItemStack item = element.render(view, 0);
-                    boolean result = filterFunc.apply(searchTerm, item);
-                    return result;
+                    return filterFunc.apply(searchTerm, item);
                 };
             }
             return fallbackFilter(input);
         }
         return fallbackFilter(input.toLowerCase(Locale.ROOT));
     }
+
     private static Predicate<GuiElement> fallbackFilter(String query) {
         String loweredQuery = query.toLowerCase(Locale.ROOT);
         PlainTextComponentSerializer plainSerializer = PlainTextComponentSerializer.plainText();
@@ -140,8 +144,7 @@ public class SearchMenu {
             }
 
             String plainName = plainSerializer.serialize(name).toLowerCase(Locale.ROOT);
-            boolean matches = plainName.contains(loweredQuery);
-            return matches;
+            return plainName.contains(loweredQuery);
         };
     }
 }

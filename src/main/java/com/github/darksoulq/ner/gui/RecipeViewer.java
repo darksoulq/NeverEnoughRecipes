@@ -2,10 +2,10 @@ package com.github.darksoulq.ner.gui;
 
 import com.github.darksoulq.abyssallib.server.resource.util.TextOffset;
 import com.github.darksoulq.abyssallib.world.gui.*;
-import com.github.darksoulq.abyssallib.world.gui.impl.GuiButton;
-import com.github.darksoulq.abyssallib.world.gui.impl.GuiItem;
-import com.github.darksoulq.abyssallib.world.gui.impl.ListedLayers;
-import com.github.darksoulq.abyssallib.world.gui.impl.PaginatedElements;
+import com.github.darksoulq.abyssallib.world.gui.element.GuiButton;
+import com.github.darksoulq.abyssallib.world.gui.element.GuiItem;
+import com.github.darksoulq.abyssallib.world.gui.layer.LayerStack;
+import com.github.darksoulq.abyssallib.world.gui.layer.PagedLayer;
 import com.github.darksoulq.ner.data.RecipeManager;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
 import com.github.darksoulq.ner.model.RecipeViewLayer;
@@ -46,7 +46,7 @@ public class RecipeViewer {
             ParsedRecipeView view = RecipeManager.parse(recipe);
             ItemStack provider = view.getProvider();
             layers.computeIfAbsent(provider, k -> new ArrayList<>())
-                    .add(new RecipeViewLayer(view, info));
+                .add(new RecipeViewLayer(view, info));
         }
 
         if (layers.isEmpty()) {
@@ -67,119 +67,134 @@ public class RecipeViewer {
 
         ParsedRecipeView currentView = layers.get(provider).getFirst().view;
         Component title = TextUtil.parse("<white><offset><title></white><width><type> of <itemname>",
-                Placeholder.parsed("title", currentView.getTexture().toMiniMessageString()),
-                Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(currentView.getOffset())),
-                Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
-                Placeholder.parsed("type", type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
-                Placeholder.component("itemname", itemName.get()));
+            Placeholder.parsed("title", currentView.getTexture().toMiniMessageString()),
+            Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(currentView.getOffset())),
+            Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
+            Placeholder.parsed("type", type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
+            Placeholder.component("itemname", itemName.get()));
         return create(title, layers, info);
     }
 
     public static Gui create(Component title, Map<ItemStack, List<RecipeViewLayer>> layers, GuiInfo.Recipe info) {
-        ListedLayers listedLayers = new ListedLayers(new ArrayList<>(layers.get(info.provider)));
+        LayerStack layerStack = new LayerStack(new ArrayList<>(layers.get(info.provider)));
 
         List<GuiElement> providerButtons = new ArrayList<>(layers.keySet().stream()
-                .map(k -> {
-                    ItemStack display = k.clone();
-                    if (k.equals(info.provider)) {
-                        display.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
-                    }
-                    return new GuiButton(display, (view, type) -> {
-                        ParsedRecipeView rview = layers.get(k).getFirst().view;
-                        Supplier<@NotNull Component> itemName = () -> {
-                            if (info.viewed.hasData(DataComponentTypes.CUSTOM_NAME))
-                                return info.viewed.getData(DataComponentTypes.CUSTOM_NAME);
-                            if (info.viewed.hasData(DataComponentTypes.ITEM_NAME))
-                                return info.viewed.getData(DataComponentTypes.ITEM_NAME);
-                            if (info.viewed.getItemMeta().hasDisplayName()) return info.viewed.displayName();
-                            return Component.text("");
-                        };
-                        Component newTitle = TextUtil.parse("<white><offset><title></white><width><type> of <itemname>",
-                                Placeholder.parsed("title", rview.getTexture().toMiniMessageString()),
-                                Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(rview.getOffset())),
-                                Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
-                                Placeholder.parsed("type", info.type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
-                                Placeholder.component("itemname", itemName.get()));
-                        GuiManager.openViews.remove(view.getInventoryView());
-                        MainMenu.loadBackup(view);
-                        Gui gui = create(newTitle, layers, new GuiInfo.Recipe(info.page, info.type, k, info.viewed));
-                        GuiManager.open(view.getInventoryView().getPlayer(), gui);
-                    });
-                })
-                .toList());
+            .map(k -> {
+                ItemStack display = k.clone();
+                if (k.equals(info.provider)) {
+                    display.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+                }
+                return new GuiButton(display, (ctx) -> {
+                    ParsedRecipeView rview = layers.get(k).getFirst().view;
+                    Supplier<@NotNull Component> itemName = () -> {
+                        if (info.viewed.hasData(DataComponentTypes.CUSTOM_NAME))
+                            return info.viewed.getData(DataComponentTypes.CUSTOM_NAME);
+                        if (info.viewed.hasData(DataComponentTypes.ITEM_NAME))
+                            return info.viewed.getData(DataComponentTypes.ITEM_NAME);
+                        if (info.viewed.getItemMeta().hasDisplayName()) return info.viewed.displayName();
+                        return Component.text("");
+                    };
+                    Component newTitle = TextUtil.parse("<white><offset><title></white><width><type> of <itemname>",
+                        Placeholder.parsed("title", rview.getTexture().toMiniMessageString()),
+                        Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(rview.getOffset())),
+                        Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
+                        Placeholder.parsed("type", info.type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
+                        Placeholder.component("itemname", itemName.get()));
+                    GuiManager.remove(ctx.view());
+                    Gui gui = create(newTitle, layers, new GuiInfo.Recipe(info.page, info.type, k, info.viewed));
+                    GuiManager.open(ctx.view().getPlayer(), gui);
+                });
+            })
+            .toList());
 
-        PaginatedElements paginatedProviders = new PaginatedElements(providerButtons,
-                new int[]{9, 10, 11, 12, 13, 14, 15, 16, 17,
-                        18, 19, 20, 21, 22, 23, 24, 25, 26,
-                        27, 28, 29, 30, 31, 32, 33, 34, 35},
-                GuiView.Segment.BOTTOM);
+        PagedLayer<GuiElement> paginatedProviders = PagedLayer.of(providerButtons,
+            new int[]{9, 10, 11, 12, 13, 14, 15, 16, 17,
+                18, 19, 20, 21, 22, 23, 24, 25, 26,
+                27, 28, 29, 30, 31, 32, 33, 34, 35},
+            GuiView.Segment.BOTTOM);
 
         ItemStack pageDisplay = MainMenu.createPageIndicator();
-        updatePageItem(listedLayers, pageDisplay, info);
+        updatePageItem(layerStack, pageDisplay, info);
 
         return new Gui.Builder(MenuType.GENERIC_9X6, title)
-                .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
-                .addLayer(listedLayers)
-                .addLayer(paginatedProviders)
-                .set(SlotPosition.bottom(0), GuiButton.of(
-                        UiItems.PREV.get().getStack(),
-                        (view, type) -> paginatedProviders.prev(view)))
-                .set(SlotPosition.bottom(8), GuiButton.of(
-                        UiItems.NEXT.get().getStack(),
-                        (view, type) -> paginatedProviders.next(view)))
-                .set(SlotPosition.top(48), GuiButton.of(
-                        UiItems.PREV.get().getStack(),
-                        (view, type) -> {
-                            if (listedLayers.getSize() != 1) listedLayers.prev(view);
-                            updatePageItem(listedLayers, pageDisplay, info);
-                        }))
-                .set(SlotPosition.top(49), GuiItem.of(pageDisplay))
-                .set(SlotPosition.top(53), GuiButton.of(
-                        UiItems.CLOSE.get().getStack(),
-                        (view, type) -> {
-                            Player player = (Player) view.getInventoryView().getPlayer();
-                            GuiInfo prev = GuiHistory.pop(player.getUniqueId());
-                            switch (prev) {
-                                case GuiInfo.Main m -> {
-                                    GuiManager.openViews.remove(view.getInventoryView());
-                                    MainMenu.loadBackup(view);
-                                    GuiManager.open(player, MainMenu.create(m));
-                                }
-                                case GuiInfo.Search s -> {
-                                    GuiManager.close(player);
-                                }
-                                case GuiInfo.Recipe r -> {
-                                    GuiManager.openViews.remove(view.getInventoryView());
-                                    MainMenu.loadBackup(view);
-                                    GuiManager.open(player, create(r.viewed, r.page, r.type, r.provider));
-                                }
-                                case null, default -> {
-                                }
-                            }
-                        }))
-                .set(SlotPosition.top(50), GuiButton.of(
-                        UiItems.NEXT.get().getStack(),
-                        (view, type) -> {
-                            if (listedLayers.getSize() != 1) listedLayers.next(view);
-                            updatePageItem(listedLayers, pageDisplay, info);
-                        }))
-                .onOpen(view -> {
-                    MainMenu.setupBackup(view);
-                    TaskUtil.delayedTask(1, () -> {
-                        while (listedLayers.getSize() < info.page) listedLayers.next(view);
-                        updatePageItem(listedLayers, pageDisplay, info);
-                    });
-                })
-                .onClose(MainMenu::loadBackup)
-                .build();
+            .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
+            .addLayer(layerStack)
+            .addLayer(paginatedProviders)
+            .set(SlotPosition.bottom(0), GuiButton.of(
+                UiItems.PREV.getStack(),
+                (ctx) -> {
+                    paginatedProviders.previous(ctx.view());
+                    paginatedProviders.renderTo(ctx.view());
+                }))
+            .set(SlotPosition.bottom(8), GuiButton.of(
+                UiItems.NEXT.getStack(),
+                (ctx) -> {
+                    paginatedProviders.next(ctx.view());
+                    paginatedProviders.renderTo(ctx.view());
+                }))
+            .set(SlotPosition.top(48), GuiButton.of(
+                UiItems.PREV.getStack(),
+                (ctx) -> {
+                    if (layerStack.size() > 1) {
+                        layerStack.previous(ctx.view());
+                        layerStack.renderTo(ctx.view());
+                    }
+                    updatePageItem(layerStack, pageDisplay, info);
+                }))
+            .set(SlotPosition.top(49), GuiItem.of(pageDisplay))
+            .set(SlotPosition.top(53), GuiButton.of(
+                UiItems.CLOSE.getStack(),
+                (ctx) -> {
+                    Player player = ctx.view().getPlayer();
+                    GuiInfo prev = GuiHistory.pop(player.getUniqueId());
+                    switch (prev) {
+                        case GuiInfo.Main m -> {
+                            GuiManager.remove(ctx.view());
+                            GuiManager.open(player, MainMenu.create(m));
+                        }
+                        case GuiInfo.Search s -> {
+                            GuiManager.close(player);
+                        }
+                        case GuiInfo.Recipe r -> {
+                            GuiManager.remove(ctx.view());
+                            GuiManager.open(player, create(r.viewed, r.page, r.type, r.provider));
+                        }
+                        case null, default -> {
+                            GuiManager.close(player);
+                        }
+                    }
+                }))
+            .set(SlotPosition.top(50), GuiButton.of(
+                UiItems.NEXT.getStack(),
+                (ctx) -> {
+                    if (layerStack.size() > 1) {
+                        layerStack.next(ctx.view());
+                        layerStack.renderTo(ctx.view());
+                    }
+                    updatePageItem(layerStack, pageDisplay, info);
+                }))
+            .onOpen(view -> {
+                MainMenu.setupBackup(view);
+                TaskUtil.delayedTask(1, () -> {
+                    layerStack.setIndex(view, info.page);
+                    layerStack.renderTo(view);
+                    updatePageItem(layerStack, pageDisplay, info);
+                });
+            })
+            .onClose(view -> {
+                if (!GuiManager.OPEN_VIEWS.containsKey(view.getInventoryView())) {
+                    MainMenu.loadBackup(view);
+                }
+            })
+            .build();
     }
 
-    private static void updatePageItem(ListedLayers layer, ItemStack stack, GuiInfo.Recipe info) {
+    private static void updatePageItem(LayerStack layer, ItemStack stack, GuiInfo.Recipe info) {
         String pageLore = String.format("<green>%d <gray>of</gray> %d</green>",
-                layer.getIndex() + 1, layer.getSize());
+            layer.getIndex() + 1, Math.max(1, layer.size()));
         stack.setData(DataComponentTypes.LORE, ItemLore.lore()
-                .lines(List.of(TextUtil.parse(pageLore)))
-                .build());
+            .lines(List.of(TextUtil.parse(pageLore)))
+            .build());
         info.page = layer.getIndex();
     }
 

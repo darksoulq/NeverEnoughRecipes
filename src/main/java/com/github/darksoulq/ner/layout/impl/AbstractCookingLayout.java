@@ -36,7 +36,7 @@ public abstract class AbstractCookingLayout<T extends CookingRecipe> extends Rec
             return new ParsedRecipeView(new HashMap<>(), Pack.COOKING, 0, new ItemStack(provider));
         setItems(slotMap, TARGET_SLOTS[0], ingredient);
         slotMap.put(TARGET_SLOTS[1], List.of(output));
-        Item expItem = UiItems.XP.get().clone();
+        Item expItem = UiItems.XP.clone();
         expItem.tooltip.addLine(TextUtil.parse("<green><exp></green>",
                         Placeholder.parsed("exp", String.valueOf(recipe.getExperience()))
                         ).decoration(TextDecoration.ITALIC, false));
