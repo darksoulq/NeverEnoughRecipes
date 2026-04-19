@@ -152,9 +152,6 @@ public class RecipeViewer {
                             GuiManager.remove(ctx.view());
                             GuiManager.open(player, MainMenu.create(m));
                         }
-                        case GuiInfo.Search s -> {
-                            GuiManager.close(player);
-                        }
                         case GuiInfo.Recipe r -> {
                             GuiManager.remove(ctx.view());
                             GuiManager.open(player, create(r.viewed, r.page, r.type, r.provider));
@@ -182,6 +179,8 @@ public class RecipeViewer {
                 });
             })
             .onClose(view -> {
+                view.getBottom().clear();
+                view.getTop().clear();
                 if (!GuiManager.OPEN_VIEWS.containsKey(view.getInventoryView())) {
                     MainMenu.loadBackup(view);
                 }

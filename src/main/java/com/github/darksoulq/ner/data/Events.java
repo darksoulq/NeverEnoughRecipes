@@ -6,6 +6,7 @@ import com.github.darksoulq.abyssallib.world.item.Item;
 import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.gui.MainMenu;
 import com.github.darksoulq.ner.gui.SearchMenu;
+import com.github.darksoulq.ner.resources.PluginPermissions;
 import com.github.darksoulq.ner.resources.UiItems;
 import com.github.darksoulq.ner.util.TaskUtil;
 import org.bukkit.entity.Player;
@@ -35,7 +36,7 @@ public class Events {
         Item item = Item.resolve(event.getItem());
         if (item == null) return;
         if (!item.equals(UiItems.DEFAULT_BOOK)) return;
-        if (!event.getPlayer().hasPermission(NeverEnoughRecipes.config().perms.openGui.get())) return;
+        if (!PluginPermissions.OPEN_GUI.has(event.getPlayer())) return;
         GuiManager.open(event.getPlayer(), SearchMenu.create());
     }
 }

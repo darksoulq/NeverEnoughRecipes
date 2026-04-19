@@ -6,10 +6,7 @@ import com.github.darksoulq.ner.data.Events;
 import com.github.darksoulq.ner.data.InternalCommands;
 import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
 import com.github.darksoulq.ner.layout.impl.*;
-import com.github.darksoulq.ner.resources.Pack;
-import com.github.darksoulq.ner.resources.PlayerPref;
-import com.github.darksoulq.ner.resources.PluginConfig;
-import com.github.darksoulq.ner.resources.UiItems;
+import com.github.darksoulq.ner.resources.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.function.Consumer;
@@ -33,6 +30,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
         Pack.init(this);
         registerDefaults();
         CommandBus.register(PLUGIN_ID, new InternalCommands());
+        PluginPermissions.NAMESPACE.apply();
         EventBus bus = new EventBus(this);
         bus.register(new Events());
 

@@ -140,14 +140,17 @@ public class MainMenu {
             .set(SlotPosition.top(45), GuiButton.of(FILTER_ITEMS.get(info.filter), (ctx) -> {
                 switch (info.filter) {
                     case RECENT -> {
+                        ctx.view().getBottom().clear();
                         GuiManager.remove(ctx.view());
                         GuiManager.open(ctx.view().getPlayer(), create(new GuiInfo.Main(info.page, info.favouritesPage, FilterType.INVENTORY)));
                     }
                     case INVENTORY -> {
+                        ctx.view().getBottom().clear();
                         GuiManager.remove(ctx.view());
                         GuiManager.open(ctx.view().getPlayer(), create(new GuiInfo.Main(info.page, info.favouritesPage, FilterType.FAVOURITE)));
                     }
                     case FAVOURITE -> {
+                        ctx.view().getBottom().clear();
                         GuiManager.remove(ctx.view());
                         GuiManager.open(ctx.view().getPlayer(), create(new GuiInfo.Main(info.page, info.favouritesPage, FilterType.RECENT)));
                     }
@@ -162,6 +165,7 @@ public class MainMenu {
             ))
             .set(SlotPosition.top(49), GuiButton.of(
                 UiItems.SEARCH.getStack(), (ctx) -> {
+                    ctx.view().getBottom().clear();
                     GuiManager.remove(ctx.view());
                     GuiManager.open(ctx.view().getPlayer(), SearchMenu.create());
                 })
@@ -217,8 +221,10 @@ public class MainMenu {
 
     private static void handleItemClick(GuiClickContext ctx, ItemStack item, GuiInfo info) {
         if (!ctx.clickType().isShiftClick() && ctx.clickType().isLeftClick()) {
+            ctx.view().getBottom().clear();
             openRecipe(ctx.view(), item, info, RecipeViewer.RecipeType.RECIPE);
         } else if (ctx.clickType().isRightClick()) {
+            ctx.view().getBottom().clear();
             openRecipe(ctx.view(), item, info, RecipeViewer.RecipeType.USE);
         } else if (Input.isShiftLeftClick(ctx.clickType())) {
             addFavourite(ctx.view().getPlayer().getUniqueId(), item);
