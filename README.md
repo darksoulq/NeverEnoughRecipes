@@ -1,28 +1,96 @@
-[![Modrinth Downloads](https://img.shields.io/modrinth/dt/neverenoughrecipes?style=flat-square&logo=modrinth&link=https%3A%2F%2Fmodrinth.com%2Fplugin%2Fneverenoughrecipes)](https://modrinth.com/plugin/neverenoughrecipes/)[![Spiget Downloads](https://img.shields.io/spiget/downloads/127199?style=flat-square&logo=spigotmc&link=https%3A%2F%2Fwww.spigotmc.org%2Fresources%2Fneverenoughrecipes.127199%2F)](https://www.spigotmc.org/resources/neverenoughrecipes.127199/)[![Discord](https://img.shields.io/discord/1204752282919370812?style=flat-square&logo=discord&link=https%3A%2F%2Fdiscord.gg%2Fe35gP423vN)](https://discord.gg/e35gP423vN)
-<img src="https://raw.githubusercontent.com/darksoulq/WhatIsThat/refs/heads/master/imgs/nerpage.png" alt="NerPage" width="100%" height="99%">
+<div align="center" style="line-height:0;">
+  <img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/banner.png" />
+  <br/>
+  <a href="https://discord.gg/e35gP423vN"><img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/general_parts/discord_dark.png"/></a><a href="https://jitpack.io/#darksoulq/NeverEnoughRecipes"><img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage@main/plugin_icons/v1/general_parts/builds_dark.png"/></a>
+</div>
 
-# Credits
-[JEI](https://modrinth.com/mod/jei) For the initial idea and many design choices
-[PolyDex](https://modrinth.com/mod/polydex) For specific design choices regarding the gui
+---
+
+## Features
+
+A recipe viewing system designed to make browsing and understanding items easier, including:
+
+- View all available items in a single menu
+- See crafting recipes and usages for any item
+- Recents, Inventory, and Favourite modes
+- Search menu with filters (@namespace) and soft-matching
+- API for adding custom items and recipes to viewer
+- Custom recipe layouts with paginated support and search filters for API
+
+And much more.
+
+---
+
+<div align="center">
+
+<table>
+<tr>
+<td align="center" width="50%">
+  <a href="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/main_menu.png">
+    <img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/main_menu.png" width="100%" />
+  </a><br/>
+  <sub><b>Main Menu</b></sub>
+</td>
+<td align="center" width="50%">
+  <a href="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/crafting.png">
+    <img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/crafting.png" width="100%" />
+  </a><br/>
+  <sub><b>Crafting Recipes</b></sub>
+</td>
+</tr>
+
+<tr>
+<td align="center" width="50%">
+  <a href="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/furnace.png">
+    <img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/furnace.png" width="100%" />
+  </a><br/>
+  <sub><b>Furnace Recipes</b></sub>
+</td>
+<td align="center" width="50%">
+  <a href="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/smithing.png">
+    <img src="https://cdn.jsdelivr.net/gh/darksoulq/ImageStorage/plugin_icons/v1/ner/smithing.png" width="100%" />
+  </a><br/>
+  <sub><b>Smithing Recipes</b></sub>
+</td>
+</tr>
+</table>
+
+</div>
+
+---
+
+## Credits
+
+Inspired by:
+
+- [JEI](https://modrinth.com/mod/jei)
+- [Polydex](https://modrinth.com/mod/polydex)
 
 # API for other plugins
-Repository:
+
+### Repository
 ```gradle
 maven { url 'https://jitpack.io' }
 ```
 
-Dependency:
+### Dependency
 ```gradle
-implementation('com.github.darksoulq:NeverEnoughRecipes:<version>')
+implementation("com.github.darksoulq:NeverEnoughRecipes:<version>")
 ```
-Replace <version> with latest github release
+Replace `<version>` with the latest GitHub release.
 
-Making your recipe parser:
+---
 
-```Java
+## Creating a Recipe Layout
+
+```java
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-public class YourRecipeParser implements RecipeLayot<YouRecipeClass> {
+public class YourRecipeParser implements RecipeLayout<YourRecipeClass> {
+
     @Override
     public Class<YourRecipeClass> getRecipeClass() {
         return YourRecipeClass.class;
@@ -32,48 +100,70 @@ public class YourRecipeParser implements RecipeLayot<YouRecipeClass> {
     public ParsedRecipeView parseRecipe(YourRecipeClass recipe) {
         Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
         // fill slotMap
-        return new ParsedRecipeView(slotMap, Texture, offset, ProviderItem);
+
+        return new ParsedRecipeView(slotMap, texture, offset, providerItem);
     }
-            
+
     @Override
-    public Set<Integer> getOutpuutSlots() {
-        // Return output slots, the items in these slots will have this recipe added as a "use"
+    public Set<Integer> getOutputSlots() {
+        // return output slots
+        // items in these slots will have this recipe added as a "use"
+        return Set.of();
     }
 }
 ```
 
-For Texture please reference how to load Fonts and TextureGlyphs in AbyssalLib. (You can ask in the discord)
-In case texture size is same as the Base texture provided on the GitHub, use an offset of -8.
-ProviderItem is what block this recipe is used in, e.g for ShapedRecipes it is a Crafting table itemstack.
+### Notes
+- **Texture**: Refer to AbyssalLib for loading fonts and `TextureGlyph`s
+- **Offset**: Use `-8` if your texture matches the base texture size
+- **ProviderItem**: The block this recipe belongs to (e.g. crafting table `ItemStack`)
 
-Register items, providers and recipes:
-```java
-NerApi.addItemToNamespace(ItemStack, "namespace");
-```
-This adds the provided stack to provided namespace and makes it visible in main meenu
-namespace can be anything, e.g. it could be your plugin name ("myplugin")
-```java
-NerApi.registerRecipe(ResultStack, Recipe);
-```
-this assigns the recipe to provided result, you can assign samme recipe to multiple results.
-```java
-NerApi.registerLayout(RecipeLayout);
-```
-this registers your given layout.
+---
 
-In the case your item has no namespace, add it as such:
+## Registering Content
+
+### Add item to namespace
 ```java
-NerApi.addItem(item);
+NerApi.addItemToNamespace(itemStack, "namespace");
+```
+Makes the item visible in the main menu.  
+`namespace` can be anything (e.g. your plugin name).
+
+### Register recipe
+```java
+NerApi.registerRecipe(resultStack, recipe);
+```
+Assigns a recipe to a result.  
+A single recipe can be registered to multiple results.
+
+### Register layout
+```java
+NerApi.registerLayout(recipeLayout);
 ```
 
-You can also register menu filters foor search menu!
+### Add item without namespace
 ```java
-NerApi.registerMenuFilter("prefix", BiFunction<String, ItemStack, Boolean>);
+NerApi.addItem(itemStack);
 ```
-The BiFunction being the filter
 
-In the off chance that you are registering your recipes in bukkit but not allowing crafting in vanilla blocks.
-```Java
-NerApi.ignoreVanillaRecipe(NamespacedKey);
+---
+
+## Search Filters
+
+```java
+NerApi.registerMenuFilter("prefix", (query, item) -> {
+    // return true/false
+});
 ```
-this MUST be called in onEnable() in case you are removing your (vanilla) recipes from default parsers (in case you wish to wrap it for your own parser)
+
+---
+
+## Ignoring Vanilla Recipes
+
+```java
+NerApi.ignoreVanillaRecipe(namespacedKey);
+```
+
+Call this in `onEnable()` if:
+- You remove vanilla recipes
+- You plan to re-handle them with your own parser  
