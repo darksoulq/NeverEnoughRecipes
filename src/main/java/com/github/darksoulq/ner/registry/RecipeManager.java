@@ -72,6 +72,7 @@ public class RecipeManager {
             ItemStack catalyst = CATALYSTS.getOrDefault(category.getRecipeClass(), new ItemStack(Material.BARRIER));
 
             ParsedRecipeView parsed = category.parseRecipe(recipe, catalyst);
+            if (parsed == null) continue;
             Set<Integer> results = category.getResultSlots();
             Set<Integer> ignored = category.getIgnoredSlots();
 

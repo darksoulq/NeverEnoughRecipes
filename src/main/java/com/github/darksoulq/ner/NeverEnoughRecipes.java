@@ -42,7 +42,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
 
         registerPlugin(new VanillaNerPlugin());
 
-        TaskUtil.delayedTask(this, 1, NeverEnoughRecipes::reloadRegistries);
+        TaskUtil.delayedTask(this, 10, NeverEnoughRecipes::reloadRegistries);
     }
 
     public static void registerPlugin(NerPlugin plugin) {
