@@ -7,6 +7,6 @@ import org.bukkit.permissions.PermissionDefault;
 
 public class PluginPermissions {
     public static final PermissionNamespace NAMESPACE = PermissionNamespace.create(NeverEnoughRecipes.PLUGIN_ID);
-
     public static final PermissionNode OPEN_GUI = NAMESPACE.register("open_gui", id -> new PermissionNode(id).defaultValue(PermissionDefault.TRUE));
+    public static final PermissionNode RELOAD = NAMESPACE.register("reload", id -> new PermissionNode(id).defaultValue(PermissionDefault.OP));
 }

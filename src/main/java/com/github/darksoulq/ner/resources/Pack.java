@@ -20,29 +20,28 @@ public class Pack {
     public static Font.TextureGlyph SMITHING;
 
     public static void init(NeverEnoughRecipes pl) {
-        ResourcePack pack = new ResourcePack(pl, NeverEnoughRecipes.PLUGIN_ID);
+        ResourcePack pack = new ResourcePack(pl, "ner");
         Namespace ns = pack.namespace("ner");
 
-        Texture MAIN_MENU_TEXTURE = ns.texture("gui/main");
-        Texture MAIN_MENU_INV_TEXTURE = ns.texture("gui/main_inv");
-        Texture SEARCH_MENU_TEXTURE = ns.texture("gui/search_menu");
-        Texture CRAFTING_TABLE_TEXTURE = ns.texture("gui/crafting");
-        Texture COOKING_TEXTURE = ns.texture("gui/cooking");
-        Texture BREWING_TEXTURE = ns.texture("gui/brewing");
-        Texture STONE_CUTTER_TEXTURE = ns.texture("gui/stone_cutter");
-        Texture SMITHING_TEXTURE = ns.texture("gui/smithing");
+        Texture mainTex = ns.texture("gui/main");
+        Texture mainInvTex = ns.texture("gui/main_inv");
+        Texture searchTex = ns.texture("gui/search_menu");
+        Texture craftTex = ns.texture("gui/crafting");
+        Texture cookTex = ns.texture("gui/cooking");
+        Texture brewTex = ns.texture("gui/brewing");
+        Texture stoneTex = ns.texture("gui/stone_cutter");
+        Texture smithTex = ns.texture("gui/smithing");
 
         Font fn = ns.font("gui", false);
-        MAIN_MENU = fn.glyph(MAIN_MENU_TEXTURE, 222, 13);
-        MAIN_MENU_INV = fn.glyph(MAIN_MENU_INV_TEXTURE, 222, 13);
-        SEARCH_MENU = fn.glyph(SEARCH_MENU_TEXTURE, 165, 13);
-        CRAFTING_TABLE = fn.glyph(CRAFTING_TABLE_TEXTURE, 222, 13);
-        COOKING = fn.glyph(COOKING_TEXTURE, 222, 13);
-        BREWING = fn.glyph(BREWING_TEXTURE, 222, 13);
-        STONE_CUTTER = fn.glyph(STONE_CUTTER_TEXTURE, 222, 13);
-        SMITHING = fn.glyph(SMITHING_TEXTURE, 222, 13);
+        MAIN_MENU = fn.glyph(mainTex, 222, 13);
+        MAIN_MENU_INV = fn.glyph(mainInvTex, 222, 13);
+        SEARCH_MENU = fn.glyph(searchTex, 165, 13);
+        CRAFTING_TABLE = fn.glyph(craftTex, 222, 13);
+        COOKING = fn.glyph(cookTex, 222, 13);
+        BREWING = fn.glyph(brewTex, 222, 13);
+        STONE_CUTTER = fn.glyph(stoneTex, 222, 13);
+        SMITHING = fn.glyph(smithTex, 222, 13);
 
-        // Items
         createItemDef(ns, "forward");
         createItemDef(ns, "backward");
         createItemDef(ns, "close");
@@ -53,7 +52,6 @@ public class Pack {
 
         ns.mcmeta("item/xp", true);
 
-        // Lang
         Lang ln = ns.lang("en_us", false);
         ln.put("item.ner.forward", "Forward");
         ln.put("item.ner.backward", "Backward");
@@ -63,10 +61,6 @@ public class Pack {
         ln.put("item.ner.search", "Search");
         ln.put("item.ner.filter", "Mode");
 
-        ln.put("lore.ner.recent", "Recents");
-        ln.put("lore.ner.inventory", "Inventory");
-        ln.put("lore.ner.favourite", "Favourites");
-
         pack.register(false);
     }
 
@@ -75,7 +69,6 @@ public class Pack {
         Model mod = ns.model(name, false);
         mod.parent("minecraft:item/generated");
         mod.texture("layer0", tex);
-        Selector.Model sel = new Selector.Model(mod);
-        ns.itemDefinition(name, sel, true);
+        ns.itemDefinition(name, new Selector.Model(mod), true);
     }
 }

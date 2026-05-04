@@ -1,203 +1,145 @@
 package com.github.darksoulq.ner.gui;
 
+import com.github.darksoulq.abyssallib.common.util.TextUtil;
 import com.github.darksoulq.abyssallib.server.resource.util.TextOffset;
-import com.github.darksoulq.abyssallib.world.gui.*;
+import com.github.darksoulq.abyssallib.world.gui.Gui;
+import com.github.darksoulq.abyssallib.world.gui.GuiFlag;
+import com.github.darksoulq.abyssallib.world.gui.GuiManager;
+import com.github.darksoulq.abyssallib.world.gui.GuiView;
+import com.github.darksoulq.abyssallib.world.gui.SlotPosition;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiButton;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiItem;
-import com.github.darksoulq.abyssallib.world.gui.layer.LayerStack;
 import com.github.darksoulq.abyssallib.world.gui.layer.PagedLayer;
-import com.github.darksoulq.ner.data.RecipeManager;
+import com.github.darksoulq.ner.gui.element.GuiAnimatedButton;
+import com.github.darksoulq.ner.model.ControlAction;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
-import com.github.darksoulq.ner.model.RecipeViewLayer;
+import com.github.darksoulq.ner.registry.RecipeManager;
 import com.github.darksoulq.ner.resources.UiItems;
-import com.github.darksoulq.ner.util.TaskUtil;
-import com.github.darksoulq.ner.util.TextUtil;
+import com.github.darksoulq.ner.user.PlayerSettings;
+import com.github.darksoulq.ner.user.UserManager;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ItemLore;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MenuType;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 public class RecipeViewer {
-    public static Gui create(ItemStack stack, int page, RecipeType type) {
-        return create(stack, page, type, null);
+    public enum Type { RECIPE, USE }
+
+    private static final int[] PROVIDER_SLOTS = {
+        9, 10, 11, 12, 13, 14, 15, 16, 17,
+        18, 19, 20, 21, 22, 23, 24, 25, 26,
+        27, 28, 29, 30, 31, 32, 33, 34, 35
+    };
+
+    public static Gui create(ItemStack target, Type type) {
+        return create(target, type, 0, 0);
     }
 
-    public static Gui create(ItemStack stack, int page, RecipeType type, ItemStack provided) {
-        List<Object> recipes = switch (type) {
-            case RECIPE -> RecipeManager.getRecipesForResult(stack);
-            case USE -> RecipeManager.getUsesForItem(stack);
-        };
-        if (recipes.isEmpty()) {
-            throw new IllegalStateException("No recipes found for " + stack);
+    public static Gui create(ItemStack target, Type type, int categoryOffset, int recipePage) {
+        List<ParsedRecipeView> allRecipes = type == Type.RECIPE ? RecipeManager.getRecipes(target) : RecipeManager.getUses(target);
+        if (allRecipes.isEmpty()) return MainMenu.create(null);
+
+        Map<ItemStack, List<ParsedRecipeView>> grouped = new LinkedHashMap<>();
+        for (ParsedRecipeView v : allRecipes) {
+            grouped.computeIfAbsent(v.provider(), k -> new ArrayList<>()).add(v);
         }
 
-        Map<ItemStack, List<RecipeViewLayer>> layers = new LinkedHashMap<>();
+        List<ItemStack> categories = new ArrayList<>(grouped.keySet());
+        int safeCategoryOffset = (categoryOffset % categories.size() + categories.size()) % categories.size();
+        ItemStack currentCategory = categories.get(safeCategoryOffset);
+        List<ParsedRecipeView> activeRecipes = grouped.get(currentCategory);
 
-        GuiInfo.Recipe info = new GuiInfo.Recipe(page, type, null, stack);
+        int safeRecipePage = (recipePage % activeRecipes.size() + activeRecipes.size()) % activeRecipes.size();
+        ParsedRecipeView currentView = activeRecipes.get(safeRecipePage);
 
-        for (Object recipe : recipes) {
-            ParsedRecipeView view = RecipeManager.parse(recipe);
-            ItemStack provider = view.getProvider();
-            layers.computeIfAbsent(provider, k -> new ArrayList<>())
-                .add(new RecipeViewLayer(view, info));
-        }
+        Gui.Builder builder = Gui.builder(MenuType.GENERIC_9X6, TextUtil.parse("<white><offset><texture></white><width><title>",
+                Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(currentView.offset())),
+                Placeholder.parsed("texture", currentView.texture().toMiniMessageString()),
+                Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
+                Placeholder.parsed("title", type == Type.RECIPE ? "Recipes" : "Uses")))
+            .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
+            .set(SlotPosition.top(48), new GuiButton(UiItems.PREV.getStack(), ctx -> {
+                InventoryBackupManager.transition(ctx.view());
+                GuiManager.open(ctx.view().getPlayer(), create(target, type, safeCategoryOffset, safeRecipePage - 1));
+            }))
+            .set(SlotPosition.top(50), new GuiButton(UiItems.NEXT.getStack(), ctx -> {
+                InventoryBackupManager.transition(ctx.view());
+                GuiManager.open(ctx.view().getPlayer(), create(target, type, safeCategoryOffset, safeRecipePage + 1));
+            }))
+            .set(SlotPosition.top(53), new GuiButton(UiItems.CLOSE.getStack(), ctx -> {
+                InventoryBackupManager.transition(ctx.view());
+                GuiManager.open(ctx.view().getPlayer(), MainMenu.create(ctx.view().getPlayer()));
+            }));
 
-        if (layers.isEmpty()) {
-            throw new IllegalStateException("No layers parsed from recipes for " + stack);
-        }
+        ItemStack pageIndicator = new ItemStack(Material.BOOK);
+        pageIndicator.setData(DataComponentTypes.ITEM_NAME, TextUtil.parse("<green>Page</green>"));
+        pageIndicator.setData(DataComponentTypes.LORE, ItemLore.lore().lines(List.of(
+            TextUtil.parse("<green>" + (safeRecipePage + 1) + " <gray>of</gray> " + activeRecipes.size() + "</green>")
+        )).build());
+        builder.set(SlotPosition.top(49), new GuiItem(pageIndicator));
 
-        ItemStack provider = provided == null ? layers.keySet().iterator().next() : provided;
-        info.provider = provider;
-
-        Supplier<@NotNull Component> itemName = () -> {
-            if (stack.hasData(DataComponentTypes.CUSTOM_NAME))
-                return stack.getData(DataComponentTypes.CUSTOM_NAME);
-            if (stack.hasData(DataComponentTypes.ITEM_NAME))
-                return stack.getData(DataComponentTypes.ITEM_NAME);
-            if (stack.getItemMeta().hasDisplayName()) return stack.displayName();
-            return Component.text("");
-        };
-
-        ParsedRecipeView currentView = layers.get(provider).getFirst().view;
-        Component title = TextUtil.parse("<white><offset><title></white><width><type> of <itemname>",
-            Placeholder.parsed("title", currentView.getTexture().toMiniMessageString()),
-            Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(currentView.getOffset())),
-            Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
-            Placeholder.parsed("type", type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
-            Placeholder.component("itemname", itemName.get()));
-        return create(title, layers, info);
-    }
-
-    public static Gui create(Component title, Map<ItemStack, List<RecipeViewLayer>> layers, GuiInfo.Recipe info) {
-        LayerStack layerStack = new LayerStack(new ArrayList<>(layers.get(info.provider)));
-
-        List<GuiElement> providerButtons = new ArrayList<>(layers.keySet().stream()
-            .map(k -> {
-                ItemStack display = k.clone();
-                if (k.equals(info.provider)) {
+        PagedLayer<ItemStack> providersLayer = PagedLayer.of(categories, PROVIDER_SLOTS, GuiView.Segment.BOTTOM,
+            (cat, index) -> {
+                ItemStack display = cat.clone();
+                if (index == safeCategoryOffset) {
                     display.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
                 }
-                return new GuiButton(display, (ctx) -> {
-                    ParsedRecipeView rview = layers.get(k).getFirst().view;
-                    Supplier<@NotNull Component> itemName = () -> {
-                        if (info.viewed.hasData(DataComponentTypes.CUSTOM_NAME))
-                            return info.viewed.getData(DataComponentTypes.CUSTOM_NAME);
-                        if (info.viewed.hasData(DataComponentTypes.ITEM_NAME))
-                            return info.viewed.getData(DataComponentTypes.ITEM_NAME);
-                        if (info.viewed.getItemMeta().hasDisplayName()) return info.viewed.displayName();
-                        return Component.text("");
-                    };
-                    Component newTitle = TextUtil.parse("<white><offset><title></white><width><type> of <itemname>",
-                        Placeholder.parsed("title", rview.getTexture().toMiniMessageString()),
-                        Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(rview.getOffset())),
-                        Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
-                        Placeholder.parsed("type", info.type.equals(RecipeType.USE) ? "Uses" : "Recipes"),
-                        Placeholder.component("itemname", itemName.get()));
-                    GuiManager.remove(ctx.view());
-                    Gui gui = create(newTitle, layers, new GuiInfo.Recipe(info.page, info.type, k, info.viewed));
-                    GuiManager.open(ctx.view().getPlayer(), gui);
+                return new GuiButton(display, ctx -> {
+                    InventoryBackupManager.transition(ctx.view());
+                    GuiManager.open(ctx.view().getPlayer(), create(target, type, index, 0));
                 });
-            })
-            .toList());
+            }
+        );
+        builder.addLayer(providersLayer);
 
-        PagedLayer<GuiElement> paginatedProviders = PagedLayer.of(providerButtons,
-            new int[]{9, 10, 11, 12, 13, 14, 15, 16, 17,
-                18, 19, 20, 21, 22, 23, 24, 25, 26,
-                27, 28, 29, 30, 31, 32, 33, 34, 35},
-            GuiView.Segment.BOTTOM);
+        builder.set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.getStack(), ctx -> {
+            providersLayer.previous(ctx.view());
+            providersLayer.renderTo(ctx.view());
+        }));
+        builder.set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.getStack(), ctx -> {
+            providersLayer.next(ctx.view());
+            providersLayer.renderTo(ctx.view());
+        }));
 
-        ItemStack pageDisplay = MainMenu.createPageIndicator();
-        updatePageItem(layerStack, pageDisplay, info);
+        for (Map.Entry<Integer, List<ItemStack>> entry : currentView.slots().entrySet()) {
+            List<ItemStack> cycled = entry.getValue();
+            if (cycled.isEmpty()) continue;
 
-        return new Gui.Builder(MenuType.GENERIC_9X6, title)
-            .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
-            .addLayer(layerStack)
-            .addLayer(paginatedProviders)
-            .set(SlotPosition.bottom(0), GuiButton.of(
-                UiItems.PREV.getStack(),
-                (ctx) -> {
-                    paginatedProviders.previous(ctx.view());
-                    paginatedProviders.renderTo(ctx.view());
-                }))
-            .set(SlotPosition.bottom(8), GuiButton.of(
-                UiItems.NEXT.getStack(),
-                (ctx) -> {
-                    paginatedProviders.next(ctx.view());
-                    paginatedProviders.renderTo(ctx.view());
-                }))
-            .set(SlotPosition.top(48), GuiButton.of(
-                UiItems.PREV.getStack(),
-                (ctx) -> {
-                    if (layerStack.size() > 1) {
-                        layerStack.previous(ctx.view());
-                        layerStack.renderTo(ctx.view());
-                    }
-                    updatePageItem(layerStack, pageDisplay, info);
-                }))
-            .set(SlotPosition.top(49), GuiItem.of(pageDisplay))
-            .set(SlotPosition.top(53), GuiButton.of(
-                UiItems.CLOSE.getStack(),
-                (ctx) -> {
-                    Player player = ctx.view().getPlayer();
-                    GuiInfo prev = GuiHistory.pop(player.getUniqueId());
-                    switch (prev) {
-                        case GuiInfo.Main m -> {
-                            GuiManager.remove(ctx.view());
-                            GuiManager.open(player, MainMenu.create(m));
-                        }
-                        case GuiInfo.Recipe r -> {
-                            GuiManager.remove(ctx.view());
-                            GuiManager.open(player, create(r.viewed, r.page, r.type, r.provider));
-                        }
-                        case null, default -> {
-                            GuiManager.close(player);
-                        }
-                    }
-                }))
-            .set(SlotPosition.top(50), GuiButton.of(
-                UiItems.NEXT.getStack(),
-                (ctx) -> {
-                    if (layerStack.size() > 1) {
-                        layerStack.next(ctx.view());
-                        layerStack.renderTo(ctx.view());
-                    }
-                    updatePageItem(layerStack, pageDisplay, info);
-                }))
-            .onOpen(view -> {
-                MainMenu.setupBackup(view);
-                TaskUtil.delayedTask(1, () -> {
-                    layerStack.setIndex(view, info.page);
-                    layerStack.renderTo(view);
-                    updatePageItem(layerStack, pageDisplay, info);
-                });
-            })
-            .onClose(view -> {
-                view.getBottom().clear();
-                view.getTop().clear();
-                if (!GuiManager.OPEN_VIEWS.containsKey(view.getInventoryView())) {
-                    MainMenu.loadBackup(view);
-                }
-            })
-            .build();
+            if (cycled.size() == 1) {
+                builder.set(SlotPosition.top(entry.getKey()), new GuiButton(cycled.getFirst(), ctx ->
+                    handleItemClick(ctx.view().getPlayer(), ctx.view(), cycled.getFirst(), ctx.clickType())
+                ));
+            } else {
+                builder.set(SlotPosition.top(entry.getKey()), new GuiAnimatedButton(cycled, 20, ctx ->
+                    handleItemClick(ctx.view().getPlayer(), ctx.view(), ctx.currentItem(), ctx.clickType())
+                ));
+            }
+        }
+
+        return builder.onOpen(view -> {
+            InventoryBackupManager.setup(view);
+            providersLayer.renderTo(view);
+        }).onClose(InventoryBackupManager::restore).build();
     }
 
-    private static void updatePageItem(LayerStack layer, ItemStack stack, GuiInfo.Recipe info) {
-        String pageLore = String.format("<green>%d <gray>of</gray> %d</green>",
-            layer.getIndex() + 1, Math.max(1, layer.size()));
-        stack.setData(DataComponentTypes.LORE, ItemLore.lore()
-            .lines(List.of(TextUtil.parse(pageLore)))
-            .build());
-        info.page = layer.getIndex();
-    }
+    private static void handleItemClick(Player player, GuiView view, ItemStack item, ClickType click) {
+        if (item == null || item.isEmpty()) return;
+        PlayerSettings settings = UserManager.get(player.getUniqueId());
+        ControlAction action = settings.resolveAction(click);
+        if (action == null) return;
 
-    public enum RecipeType {
-        RECIPE, USE
+        if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
+            InventoryBackupManager.transition(view);
+            GuiManager.open(player, create(item, Type.RECIPE, 0, 0));
+        } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
+            InventoryBackupManager.transition(view);
+            GuiManager.open(player, create(item, Type.USE, 0, 0));
+        }
     }
 }

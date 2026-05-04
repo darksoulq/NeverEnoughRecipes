@@ -70,7 +70,7 @@ Inspired by:
 
 ### Repository
 ```gradle
-maven { url 'https://jitpack.io' }
+maven { url '[https://jitpack.io](https://jitpack.io)' }
 ```
 
 ### Dependency
@@ -81,15 +81,20 @@ Replace `<version>` with the latest GitHub release.
 
 ---
 
-## Creating a Recipe Layout
+## Creating a Recipe Category
+
+The layout system has been redesigned into `RecipeCategory`.
 
 ```java
+import com.github.darksoulq.ner.layout.RecipeCategory;
+import com.github.darksoulq.ner.model.ParsedRecipeView;
+import org.bukkit.inventory.ItemStack;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class YourRecipeParser implements RecipeLayout<YourRecipeClass> {
+public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
 
     @Override
     public Class<YourRecipeClass> getRecipeClass() {
@@ -97,73 +102,96 @@ public class YourRecipeParser implements RecipeLayout<YourRecipeClass> {
     }
 
     @Override
-    public ParsedRecipeView parseRecipe(YourRecipeClass recipe) {
+    public ParsedRecipeView parseRecipe(YourRecipeClass recipe, ItemStack catalyst) {
         Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
-        // fill slotMap
-
-        return new ParsedRecipeView(slotMap, texture, offset, providerItem);
+        
+        return new ParsedRecipeView(slotMap, texture, offset, catalyst);
     }
 
     @Override
-    public Set<Integer> getOutputSlots() {
-        // return output slots
-        // items in these slots will have this recipe added as a "use"
+    public Set<Integer> getResultSlots() {
+        return Set.of(24);
+    }
+
+    @Override
+    public Set<Integer> getIgnoredSlots() {
         return Set.of();
     }
 }
 ```
 
 ### Notes
-- **Texture**: Refer to AbyssalLib for loading fonts and `TextureGlyph`s
-- **Offset**: Use `-8` if your texture matches the base texture size
-- **ProviderItem**: The block this recipe belongs to (e.g. crafting table `ItemStack`)
+- **Texture**: Refer to AbyssalLib for loading fonts and `TextureGlyph`s.
+- **Offset**: Use `-8` if your texture matches the base texture size.
+- **Catalyst**: The provider item (e.g. Crafting Table) is now passed to the parser automatically by the registry.
 
 ---
 
 ## Registering Content
 
-### Add item to namespace
+NER now uses a lifecycle-based plugin registration system. You must implement `NerPlugin` and register your content when the `NerRegistrationEvent` is fired.
+
+### 1. Create your Integration
 ```java
-NerApi.addItemToNamespace(itemStack, "namespace");
-```
-Makes the item visible in the main menu.  
-`namespace` can be anything (e.g. your plugin name).
+import com.github.darksoulq.ner.plugin.NerPlugin;
+import com.github.darksoulq.ner.plugin.Registration;
+import org.bukkit.inventory.ItemStack;
 
-### Register recipe
-```java
-NerApi.registerRecipe(resultStack, recipe);
-```
-Assigns a recipe to a result.  
-A single recipe can be registered to multiple results.
+public class MyNerIntegration implements NerPlugin {
+    
+    @Override
+    public void register(Registration registry) {
+        
+        registry.addCategory(new YourRecipeCategory());
+        registry.addCatalyst(YourRecipeClass.class, new ItemStack(Material.CRAFTING_TABLE));
+        
+        registry.addItem(itemStack);
+        registry.addItem("custom_namespace", itemStack); 
 
-### Register layout
-```java
-NerApi.registerLayout(recipeLayout);
-```
+        registry.addRecipe(recipeInstance);
 
-### Add item without namespace
-```java
-NerApi.addItem(itemStack);
-```
+        registry.removeRecipe(recipeInstance);
+        registry.removeRecipes(recipe -> recipe instanceof YourRecipeClass && shouldRemove((YourRecipeClass) recipe));
+        
+        registry.addFilter("!", (query, item) -> {
+            return item.getType().name().contains(query);
+        });
 
----
+        registry.addDeduplicator(item -> {
+            if (item.getType() == Material.POTION) return new ItemStack(Material.POTION);
+            return item;
+        });
 
-## Search Filters
-
-```java
-NerApi.registerMenuFilter("prefix", (query, item) -> {
-    // return true/false
-});
-```
-
----
-
-## Ignoring Vanilla Recipes
-
-```java
-NerApi.ignoreVanillaRecipe(namespacedKey);
+        registry.setNamespaceComparator("custom_namespace", (item1, item2) -> {
+            return item1.getType().name().compareTo(item2.getType().name());
+        });
+    }
+}
 ```
 
-Call this in `onEnable()` if:
-- You remove vanilla recipes
-- You plan to re-handle them with your own parser  
+### 2. Hook into NER
+Listen for the `NerRegistrationEvent` in your plugin and pass the `Registration` context to your integration class.
+
+```java
+import com.github.darksoulq.ner.plugin.NerRegistrationEvent;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+
+public class NerListener implements Listener {
+
+    private final MyNerIntegration integration = new MyNerIntegration();
+
+    @EventHandler
+    public void onNerRegistration(NerRegistrationEvent event) {
+        integration.register(event.getRegistration());
+    }
+}
+```
+
+Make sure to register your listener in your plugin's `onEnable()`:
+```java
+@Override
+public void onEnable() {
+    getServer().getPluginManager().registerEvents(new NerListener(), this);
+}
+```

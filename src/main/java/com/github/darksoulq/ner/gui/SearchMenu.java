@@ -1,150 +1,91 @@
 package com.github.darksoulq.ner.gui;
 
+import com.github.darksoulq.abyssallib.common.util.TextUtil;
 import com.github.darksoulq.abyssallib.server.resource.util.TextOffset;
-import com.github.darksoulq.abyssallib.world.gui.*;
+import com.github.darksoulq.abyssallib.world.gui.Gui;
+import com.github.darksoulq.abyssallib.world.gui.GuiFlag;
+import com.github.darksoulq.abyssallib.world.gui.GuiManager;
+import com.github.darksoulq.abyssallib.world.gui.SlotPosition;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiButton;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiItem;
 import com.github.darksoulq.abyssallib.world.gui.layer.PagedLayer;
 import com.github.darksoulq.abyssallib.world.item.Items;
-import com.github.darksoulq.ner.data.NamespacedFilterManager;
+import com.github.darksoulq.ner.model.ControlAction;
+import com.github.darksoulq.ner.registry.IngredientManager;
+import com.github.darksoulq.ner.registry.RecipeManager;
 import com.github.darksoulq.ner.resources.Pack;
 import com.github.darksoulq.ner.resources.UiItems;
-import com.github.darksoulq.ner.util.TextUtil;
+import com.github.darksoulq.ner.user.PlayerSettings;
+import com.github.darksoulq.ner.user.UserManager;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MenuType;
 import org.bukkit.inventory.view.AnvilView;
 
-import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public class SearchMenu {
-    private static final Map<String, BiFunction<String, ItemStack, Boolean>> FILTERS = new HashMap<>();
-    private static final Component MENU_TITLE = TextUtil.parse(
-        "<white><offset><title></white><width>Search",
-        Placeholder.parsed("title", Pack.SEARCH_MENU.toMiniMessageString()),
-        Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(-60)),
-        Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-170))
-    );
-
-    private static final int[] DISPLAY_SLOTS = {
+    private static final int[] SLOTS = {
         9, 10, 11, 12, 13, 14, 15, 16, 17,
         18, 19, 20, 21, 22, 23, 24, 25, 26,
         27, 28, 29, 30, 31, 32, 33, 34, 35
     };
 
-    static {
-        addFilter("@", (query, stack) -> {
-            List<String> namespaces = NamespacedFilterManager.getMatchingNamespaces(query);
-            return NamespacedFilterManager.getItems(namespaces).contains(stack);
-        });
-    }
+    public static Gui create(Player player) {
+        List<ItemStack> allItems = IngredientManager.getItems();
+        final String[] activeInput = { "" };
 
-    public static void addFilter(String key, BiFunction<String, ItemStack, Boolean> filter) {
-        FILTERS.put(key.toLowerCase(Locale.ROOT), filter);
-    }
+        PagedLayer<ItemStack> page = PagedLayer.of(allItems, SLOTS, com.github.darksoulq.abyssallib.world.gui.GuiView.Segment.BOTTOM,
+            (item, index) -> new GuiButton(item, ctx -> {
+                PlayerSettings settings = UserManager.get(player.getUniqueId());
+                ControlAction action = settings.resolveAction(ctx.clickType());
+                if (action == null) return;
 
-    public static Gui create() {
-        return create(new GuiInfo.Search("", 0));
-    }
-
-    public static Gui create(GuiInfo.Search info) {
-        List<GuiElement> guiElements = new ArrayList<>();
-        MainMenu.populateElements(guiElements, info);
-
-        PagedLayer<GuiElement> paginatedElements = PagedLayer.of(guiElements, DISPLAY_SLOTS, GuiView.Segment.BOTTOM);
-
-        Predicate<GuiElement> initialFilter = buildFilterPredicate(info.text, null);
-        paginatedElements.setFilter(initialFilter);
+                if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
+                    InventoryBackupManager.transition(ctx.view());
+                    GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.RECIPE));
+                } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
+                    InventoryBackupManager.transition(ctx.view());
+                    GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.USE));
+                }
+            })
+        );
 
         ItemStack invisibleFiller = Items.INVISIBLE_ITEM.getStack();
         invisibleFiller.setData(DataComponentTypes.ITEM_NAME, Component.text(""));
         invisibleFiller.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay().hideTooltip(true).build());
 
-        ItemStack pageIndicator = MainMenu.createPageIndicator();
-        MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
-
-        return new Gui.Builder(MenuType.ANVIL, MENU_TITLE)
+        return Gui.builder(MenuType.ANVIL, TextUtil.parse("<white><offset><texture></white><width>Search",
+                Placeholder.parsed("texture", Pack.SEARCH_MENU.toMiniMessageString()),
+                Placeholder.parsed("offset", com.github.darksoulq.abyssallib.server.resource.util.TextOffset.getOffsetMinimessage(-60)),
+                Placeholder.parsed("width", com.github.darksoulq.abyssallib.server.resource.util.TextOffset.getOffsetMinimessage(-170))))
             .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
-            .addLayer(paginatedElements)
-            .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.getStack(), (ctx) -> {
-                paginatedElements.previous(ctx.view());
-                paginatedElements.renderTo(ctx.view());
-                MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
-            }))
-            .set(SlotPosition.bottom(4), new GuiItem(pageIndicator))
-            .set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.getStack(), (ctx) -> {
-                paginatedElements.next(ctx.view());
-                paginatedElements.renderTo(ctx.view());
-                MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
-            }))
+            .addLayer(page)
+            .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.getStack(), ctx -> { page.previous(ctx.view()); page.renderTo(ctx.view()); }))
+            .set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.getStack(), ctx -> { page.next(ctx.view()); page.renderTo(ctx.view()); }))
             .set(SlotPosition.top(0), new GuiItem(invisibleFiller))
-            .onOpen(MainMenu::setupBackup)
             .onTick(view -> {
-                if (!(view.getInventoryView() instanceof AnvilView anvilView)) {
-                    return;
-                }
+                if (!(view.getInventoryView() instanceof AnvilView anvilView)) return;
+                String nextInput = Optional.ofNullable(anvilView.getRenameText()).orElse("");
+                if (activeInput[0].equals(nextInput)) return;
 
-                String currentInput = Optional.ofNullable(anvilView.getRenameText()).orElse("");
-                boolean isOld = info.text.equals(currentInput);
-
-                if (isOld) return;
-                info.text = currentInput;
-
-                Predicate<GuiElement> filterPredicate = buildFilterPredicate(info.text, view);
-                paginatedElements.setFilter(filterPredicate);
-                paginatedElements.renderTo(view);
-                MainMenu.updatePageIndicator(paginatedElements, pageIndicator, info);
+                activeInput[0] = nextInput;
+                Set<ItemStack> searchResults = new HashSet<>(IngredientManager.search(nextInput));
+                page.setFilter(searchResults::contains);
+                page.renderTo(view);
             })
-            .onClose(view -> {
-                if (!GuiManager.OPEN_VIEWS.containsKey(view.getInventoryView())) {
-                    MainMenu.loadBackup(view);
-                }
+            .onOpen(view -> {
+                InventoryBackupManager.setup(view);
+                page.renderTo(view);
             })
+            .onClose(InventoryBackupManager::restore)
             .build();
-    }
-
-    private static Predicate<GuiElement> buildFilterPredicate(String input, GuiView view) {
-        int colonIndex = input.indexOf(':');
-        if (colonIndex > 0) {
-            String prefix = input.substring(0, colonIndex).toLowerCase(Locale.ROOT);
-            String searchTerm = input.substring(colonIndex + 1);
-
-            BiFunction<String, ItemStack, Boolean> filterFunc = FILTERS.get(prefix);
-            if (filterFunc != null) {
-                return element -> {
-                    ItemStack item = element.render(view, 0);
-                    return filterFunc.apply(searchTerm, item);
-                };
-            }
-            return fallbackFilter(input);
-        }
-        return fallbackFilter(input.toLowerCase(Locale.ROOT));
-    }
-
-    private static Predicate<GuiElement> fallbackFilter(String query) {
-        String loweredQuery = query.toLowerCase(Locale.ROOT);
-        PlainTextComponentSerializer plainSerializer = PlainTextComponentSerializer.plainText();
-
-        return element -> {
-            ItemStack item = element.render(null, 0);
-            if (item == null) {
-                return false;
-            }
-
-            Component name = item.getData(DataComponentTypes.CUSTOM_NAME);
-            if (name == null) name = item.getData(DataComponentTypes.ITEM_NAME);
-            if (name == null) {
-                return false;
-            }
-
-            String plainName = plainSerializer.serialize(name).toLowerCase(Locale.ROOT);
-            return plainName.contains(loweredQuery);
-        };
     }
 }

@@ -2,61 +2,63 @@ package com.github.darksoulq.ner;
 
 import com.github.darksoulq.abyssallib.server.command.CommandBus;
 import com.github.darksoulq.abyssallib.server.event.EventBus;
+import com.github.darksoulq.abyssallib.server.util.TaskUtil;
 import com.github.darksoulq.ner.data.Events;
 import com.github.darksoulq.ner.data.InternalCommands;
-import com.github.darksoulq.ner.layout.RecipeLayoutRegistry;
-import com.github.darksoulq.ner.layout.impl.*;
-import com.github.darksoulq.ner.resources.*;
+import com.github.darksoulq.ner.data.PluginConfig;
+import com.github.darksoulq.ner.plugin.InternalRegistration;
+import com.github.darksoulq.ner.plugin.NerPlugin;
+import com.github.darksoulq.ner.plugin.NerRegistrationEvent;
+import com.github.darksoulq.ner.plugin.VanillaNerPlugin;
+import com.github.darksoulq.ner.registry.IngredientManager;
+import com.github.darksoulq.ner.registry.RecipeManager;
+import com.github.darksoulq.ner.resources.Pack;
+import com.github.darksoulq.ner.resources.PluginPermissions;
+import com.github.darksoulq.ner.resources.UiItems;
+import com.github.darksoulq.ner.user.UserManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.function.Consumer;
-import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class NeverEnoughRecipes extends JavaPlugin {
     public static NeverEnoughRecipes INSTANCE;
+    public static PluginConfig CONFIG;
     public static final String PLUGIN_ID = "ner";
-    public static Logger LOGGER;
-    private static PluginConfig CONFIG;
-    private static PlayerPref PREFS;
+    private static final List<NerPlugin> PLUGINS = new ArrayList<>();
 
     @Override
     public void onEnable() {
         INSTANCE = this;
-        LOGGER = getLogger();
-        PREFS = new PlayerPref();
         CONFIG = new PluginConfig();
-        CONFIG.cfg.save();
-        PREFS.cfg.save();
+
         Pack.init(this);
-        registerDefaults();
-        CommandBus.register(PLUGIN_ID, new InternalCommands());
+        UiItems.ITEMS.apply();
         PluginPermissions.NAMESPACE.apply();
+        CommandBus.register(PLUGIN_ID, new InternalCommands());
+
         EventBus bus = new EventBus(this);
         bus.register(new Events());
 
-        UiItems.ITEMS.apply();
+        registerPlugin(new VanillaNerPlugin());
+
+        TaskUtil.delayedTask(this, 1, NeverEnoughRecipes::reloadRegistries);
     }
 
-    public static PluginConfig config() {
-        return CONFIG;
-    }
-    public static PlayerPref getPrefs() {
-        return PREFS;
-    }
-    public static void updatePrefs(Consumer<PlayerPref> updater) {
-        updater.accept(PREFS);
-        PREFS.cfg.save();
+    public static void registerPlugin(NerPlugin plugin) {
+        PLUGINS.add(plugin);
     }
 
-    private void registerDefaults() {
-        RecipeLayoutRegistry.register(new ShapedRecipeLayout());
-        RecipeLayoutRegistry.register(new ShapelessRecipeLayout());
-        RecipeLayoutRegistry.register(new TransmuteRecipeLayout());
-        RecipeLayoutRegistry.register(new FurnaceRecipeLayout());
-        RecipeLayoutRegistry.register(new BlastingRecipeLayout());
-        RecipeLayoutRegistry.register(new SmokingRecipeLayout());
-        RecipeLayoutRegistry.register(new CampfireRecipeLayout());
-        RecipeLayoutRegistry.register(new SmithingTransformRecipeLayout());
-        RecipeLayoutRegistry.register(new StonecuttingRecipeLayout());
+    public static void reloadRegistries() {
+        IngredientManager.clear();
+        RecipeManager.clear();
+
+        InternalRegistration registration = new InternalRegistration();
+        for (NerPlugin plugin : PLUGINS) {
+            plugin.register(registration);
+        }
+
+        EventBus.post(new NerRegistrationEvent(registration));
+        RecipeManager.compile();
     }
 }
