@@ -104,7 +104,7 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
     @Override
     public ParsedRecipeView parseRecipe(YourRecipeClass recipe, ItemStack catalyst) {
         Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
-        
+
         return new ParsedRecipeView(slotMap, texture, offset, catalyst);
     }
 
@@ -129,7 +129,7 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
 
 ## Registering Content
 
-NER now uses a lifecycle-based plugin registration system. You must implement `NerPlugin` and register your content when the `NerRegistrationEvent` is fired.
+NER now uses a lifecycle-based plugin registration system. You must implement `NerPlugin` and register it.
 
 ### 1. Create your Integration
 ```java
@@ -170,28 +170,13 @@ public class MyNerIntegration implements NerPlugin {
 ```
 
 ### 2. Hook into NER
-Listen for the `NerRegistrationEvent` in your plugin and pass the `Registration` context to your integration class.
+Register your integration during your plugin's `onEnable()`:
 
 ```java
-import com.github.darksoulq.ner.plugin.NerRegistrationEvent;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
+import com.github.darksoulq.ner.NeverEnoughRecipes;
 
-public class NerListener implements Listener {
-
-    private final MyNerIntegration integration = new MyNerIntegration();
-
-    @EventHandler
-    public void onNerRegistration(NerRegistrationEvent event) {
-        integration.register(event.getRegistration());
-    }
-}
-```
-
-Make sure to register your listener in your plugin's `onEnable()`:
-```java
 @Override
 public void onEnable() {
-    getServer().getPluginManager().registerEvents(new NerListener(), this);
+    NeverEnoughRecipes.registerPlugin(new MyNerIntegration());
 }
 ```
