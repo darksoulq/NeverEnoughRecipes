@@ -39,7 +39,7 @@ repositories {
 
 dependencies {
     paperweight.paperDevBundle('26.1.2.build.+')
-    compileOnly 'com.github.darksoulq:AbyssalLib:v2.3.0-mc.26.1.2'
+    compileOnly 'com.github.darksoulq:AbyssalLib:v2.4.0-mc.26.1.2-alpha.1'
     compileOnly 'dev.faststats.metrics:bukkit:0.22.0'
 }
 

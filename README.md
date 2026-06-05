@@ -6,6 +6,9 @@
 
 ---
 
+## Requirements:
+The plugin requires [AbyssalLib](https://modrinth.com/plugin/abyssallib)
+
 ## Features
 
 A recipe viewing system designed to make browsing and understanding items easier, including:
