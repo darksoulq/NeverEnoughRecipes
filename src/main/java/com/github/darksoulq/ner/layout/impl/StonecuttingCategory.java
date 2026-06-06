@@ -6,7 +6,8 @@ import com.github.darksoulq.ner.resources.Pack;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.StonecuttingRecipe;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Set;
 
 public class StonecuttingCategory extends RecipeCategory<StonecuttingRecipe> {
     private static final int[] SLOTS = { 20, 24 };
@@ -18,10 +19,10 @@ public class StonecuttingCategory extends RecipeCategory<StonecuttingRecipe> {
 
     @Override
     public ParsedRecipeView parseRecipe(StonecuttingRecipe recipe, ItemStack catalyst) {
-        Map<Integer, List<ItemStack>> slots = new HashMap<>();
-        applyChoice(slots, SLOTS[0], recipe.getInputChoice());
-        slots.put(SLOTS[1], List.of(recipe.getResult()));
-        return new ParsedRecipeView(slots, Pack.STONE_CUTTER, -8, catalyst);
+        return ParsedRecipeView.builder(Pack.STONE_CUTTER, -8, catalyst)
+            .setChoice(SLOTS[0], recipe.getInputChoice())
+            .set(SLOTS[1], recipe.getResult())
+            .build();
     }
 
     @Override

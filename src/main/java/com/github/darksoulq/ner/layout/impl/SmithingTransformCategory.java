@@ -6,7 +6,8 @@ import com.github.darksoulq.ner.resources.Pack;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.SmithingTransformRecipe;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Set;
 
 public class SmithingTransformCategory extends RecipeCategory<SmithingTransformRecipe> {
     private static final int[] SLOTS = { 20, 21, 22, 24 };
@@ -18,12 +19,12 @@ public class SmithingTransformCategory extends RecipeCategory<SmithingTransformR
 
     @Override
     public ParsedRecipeView parseRecipe(SmithingTransformRecipe recipe, ItemStack catalyst) {
-        Map<Integer, List<ItemStack>> slots = new HashMap<>();
-        applyChoice(slots, SLOTS[0], recipe.getTemplate());
-        applyChoice(slots, SLOTS[1], recipe.getBase());
-        applyChoice(slots, SLOTS[2], recipe.getAddition());
-        slots.put(SLOTS[3], List.of(recipe.getResult()));
-        return new ParsedRecipeView(slots, Pack.SMITHING, -8, catalyst);
+        return ParsedRecipeView.builder(Pack.SMITHING, -8, catalyst)
+            .setChoice(SLOTS[0], recipe.getTemplate())
+            .setChoice(SLOTS[1], recipe.getBase())
+            .setChoice(SLOTS[2], recipe.getAddition())
+            .set(SLOTS[3], recipe.getResult())
+            .build();
     }
 
     @Override

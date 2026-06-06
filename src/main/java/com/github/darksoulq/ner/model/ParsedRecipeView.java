@@ -6,7 +6,7 @@ import org.bukkit.inventory.RecipeChoice;
 
 import java.util.*;
 
-public record ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Map<Integer, String> probabilities, List<PagedSection> pagedSections, Font.TextureGlyph texture, int offset, ItemStack provider) {
+public record ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Map<ItemStack, String> probabilities, List<PagedSection> pagedSections, Font.TextureGlyph texture, int offset, ItemStack provider) {
     public ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Font.TextureGlyph texture, int offset, ItemStack provider) {
         this(slots, Map.of(), List.of(), texture, offset, provider);
     }
@@ -20,7 +20,7 @@ public record ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Map<Integer,
         private final int offset;
         private final ItemStack provider;
         private final Map<Integer, List<ItemStack>> baseSlots = new HashMap<>();
-        private final Map<Integer, String> probabilities = new HashMap<>();
+        private final Map<ItemStack, String> probabilities = new HashMap<>();
         private final List<PagedSection> pagedSections = new ArrayList<>();
 
         public Builder(Font.TextureGlyph texture, int offset, ItemStack provider) {
@@ -53,19 +53,37 @@ public record ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Map<Integer,
             return this;
         }
 
-        public Builder probability(int slot, String expression) {
-            if (expression != null && !expression.isBlank()) {
-                this.probabilities.put(slot, expression);
+        public Builder probability(ItemStack item, String expression) {
+            if (item != null && !item.isEmpty() && expression != null && !expression.isBlank()) {
+                this.probabilities.put(item, expression);
             }
             return this;
         }
 
-        public Builder probability(int slot, float chance) {
+        public Builder probability(ItemStack item, float chance) {
             String formatted = String.valueOf(chance);
             if (formatted.endsWith(".0")) {
                 formatted = formatted.substring(0, formatted.length() - 2);
             }
-            return probability(slot, formatted + "%");
+            return probability(item, formatted + "%");
+        }
+
+        public Builder probability(List<ItemStack> items, String expression) {
+            if (items != null) {
+                for (ItemStack item : items) {
+                    probability(item, expression);
+                }
+            }
+            return this;
+        }
+
+        public Builder probability(List<ItemStack> items, float chance) {
+            if (items != null) {
+                for (ItemStack item : items) {
+                    probability(item, chance);
+                }
+            }
+            return this;
         }
 
         public Builder addSection(PagedSection section) {

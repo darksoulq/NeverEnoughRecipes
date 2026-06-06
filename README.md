@@ -16,7 +16,7 @@ A recipe viewing system designed to make browsing and understanding items easier
 - View all available items in a single menu
 - See crafting recipes and usages for any item
 - Recents, Inventory, and Favourite modes
-- Search menu with filters (@namespace) and soft-matching
+- Search menu with filters (`@namespace`, `:lore`, `$crafting station`) and soft-matching
 - API for adding custom items and recipes to viewer
 - Custom recipe layouts with paginated support and search filters for API
 
@@ -72,29 +72,34 @@ Inspired by:
 # API for other plugins
 
 ### Repository
+
 ```gradle
-maven { url '[https://jitpack.io](https://jitpack.io)' }
+maven { url 'https://jitpack.io' }
+
 ```
 
 ### Dependency
+
 ```gradle
 implementation("com.github.darksoulq:NeverEnoughRecipes:<version>")
+
 ```
+
 Replace `<version>` with the latest GitHub release.
 
 ---
 
 ## Creating a Recipe Category
 
-The layout system has been redesigned into `RecipeCategory`.
+The layout system has been redesigned into `RecipeCategory`. You can now easily define static slots, recipe choices, probabilities, and paginated sections (mini-pages) via the `ParsedRecipeView.Builder`.
 
 ```java
 import com.github.darksoulq.ner.layout.RecipeCategory;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
+import com.github.darksoulq.ner.model.PagedSection;
+import com.github.darksoulq.ner.model.SectionButton;
 import org.bukkit.inventory.ItemStack;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
@@ -106,14 +111,23 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
 
     @Override
     public ParsedRecipeView parseRecipe(YourRecipeClass recipe, ItemStack catalyst) {
-        Map<Integer, List<ItemStack>> slotMap = new HashMap<>();
-
-        return new ParsedRecipeView(slotMap, texture, offset, catalyst);
+        return ParsedRecipeView.builder(texture, offset, catalyst)
+            .set(4, recipe.getInput())
+            .setChoice(5, recipe.getIngredientChoice())
+            .probability(recipe.getPrimaryOutput(), "50%")
+            .probability(recipe.getSecondaryOutput(), 12.5f)
+            .addSection(new PagedSection(
+                new int[]{10, 11, 12, 13}, 
+                recipe.getOutputs(), 
+                new SectionButton(9, previousIconStack), 
+                new SectionButton(14, nextIconStack)     
+            ))
+            .build();
     }
 
     @Override
     public Set<Integer> getResultSlots() {
-        return Set.of(24);
+        return Set.of(24, 10, 11, 12, 13);
     }
 
     @Override
@@ -121,24 +135,30 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
         return Set.of();
     }
 }
+
 ```
 
 ### Notes
-- **Texture**: Refer to AbyssalLib for loading fonts and `TextureGlyph`s.
-- **Offset**: Use `-8` if your texture matches the base texture size.
-- **Catalyst**: The provider item (e.g. Crafting Table) is now passed to the parser automatically by the registry.
+
+* **Texture**: Refer to AbyssalLib for loading fonts and `TextureGlyph`s.
+* **Offset**: Use `-8` if your texture matches the base texture size.
+* **Catalyst**: The provider item (e.g. Crafting Table) is passed to the parser automatically by the registry.
+* **Probabilities**: Use `.probability(itemStack, expression/float)` to append chance notations to the lore of displayed items.
+* **Paged Sections**: Pass a `PagedSection` to automatically chunk large lists of items into smaller navigable areas within the same view.
 
 ---
 
 ## Registering Content
 
-NER now uses a lifecycle-based plugin registration system. You must implement `NerPlugin` and register it.
+NER uses a lifecycle-based plugin registration system. You must implement `NerPlugin` and register it.
 
 ### 1. Create your Integration
+
 ```java
 import com.github.darksoulq.ner.plugin.NerPlugin;
 import com.github.darksoulq.ner.plugin.Registration;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
 
 public class MyNerIntegration implements NerPlugin {
     
@@ -165,14 +185,21 @@ public class MyNerIntegration implements NerPlugin {
             return item;
         });
 
+        registry.addModifier(item -> {
+            if (shouldObscure(item)) applyObfuscation(item);
+            return item;
+        });
+
         registry.setNamespaceComparator("custom_namespace", (item1, item2) -> {
             return item1.getType().name().compareTo(item2.getType().name());
         });
     }
 }
+
 ```
 
 ### 2. Hook into NER
+
 Register your integration during your plugin's `onEnable()`:
 
 ```java
@@ -182,4 +209,5 @@ import com.github.darksoulq.ner.NeverEnoughRecipes;
 public void onEnable() {
     NeverEnoughRecipes.registerPlugin(new MyNerIntegration());
 }
+
 ```

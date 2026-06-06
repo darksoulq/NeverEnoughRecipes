@@ -7,7 +7,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.TransmuteRecipe;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 public class TransmuteCategory extends RecipeCategory<TransmuteRecipe> {
     private static final int[] SLOTS = { 11, 12, 13, 20, 21, 22, 29, 30, 31 };
@@ -19,14 +21,14 @@ public class TransmuteCategory extends RecipeCategory<TransmuteRecipe> {
 
     @Override
     public ParsedRecipeView parseRecipe(TransmuteRecipe recipe, ItemStack catalyst) {
-        Map<Integer, List<ItemStack>> slots = new HashMap<>();
+        ParsedRecipeView.Builder builder = ParsedRecipeView.builder(Pack.CRAFTING_TABLE, -8, catalyst);
         List<RecipeChoice> choices = List.of(recipe.getInput(), recipe.getMaterial());
 
-        for (int i = 0; i < choices.size() && i < SLOTS.length; i++) {
-            applyChoice(slots, SLOTS[i], choices.get(i));
+        for (int i = 0; i < choices.size(); i++) {
+            builder.setChoice(SLOTS[i], choices.get(i));
         }
-        slots.put(24, List.of(recipe.getResult()));
-        return new ParsedRecipeView(slots, Pack.CRAFTING_TABLE, -8, catalyst);
+
+        return builder.set(24, recipe.getResult()).build();
     }
 
     @Override

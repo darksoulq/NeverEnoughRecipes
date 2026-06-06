@@ -90,11 +90,11 @@ public class RecipeViewer {
             List<ItemStack> cycled = entry.getValue();
             if (cycled.isEmpty()) continue;
 
-            String probExpr = currentView.probabilities().get(slot);
             List<ItemStack> displayCycled = new ArrayList<>();
 
             for (ItemStack st : cycled) {
                 ItemStack display = IngredientManager.applyModifiers(st.clone());
+                String probExpr = currentView.probabilities().get(st);
                 if (probExpr != null) applyProbabilityLore(display, probExpr);
                 displayCycled.add(display);
             }
@@ -132,7 +132,7 @@ public class RecipeViewer {
                 if (originalItem != null && !originalItem.isEmpty()) {
                     int slot = targetSlots[i];
                     ItemStack displayItem = IngredientManager.applyModifiers(originalItem.clone());
-                    String probExpr = currentView.probabilities().get(slot);
+                    String probExpr = currentView.probabilities().get(originalItem);
                     if (probExpr != null) applyProbabilityLore(displayItem, probExpr);
 
                     builder.set(SlotPosition.top(slot), new GuiButton(displayItem, ctx ->

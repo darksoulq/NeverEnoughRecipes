@@ -7,7 +7,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 public class ShapedCategory extends RecipeCategory<ShapedRecipe> {
     private static final int[] SLOTS = { 11, 12, 13, 20, 21, 22, 29, 30, 31 };
@@ -17,7 +19,7 @@ public class ShapedCategory extends RecipeCategory<ShapedRecipe> {
 
     @Override
     public ParsedRecipeView parseRecipe(ShapedRecipe recipe, ItemStack catalyst) {
-        Map<Integer, List<ItemStack>> slots = new HashMap<>();
+        ParsedRecipeView.Builder builder = ParsedRecipeView.builder(Pack.CRAFTING_TABLE, -8, catalyst);
         String[] shape = recipe.getShape();
         Map<Character, RecipeChoice> ing = recipe.getChoiceMap();
 
@@ -29,11 +31,11 @@ public class ShapedCategory extends RecipeCategory<ShapedRecipe> {
         int index = 0;
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++, index++) {
-                applyChoice(slots, SLOTS[index], ing.get(normalized[r].charAt(c)));
+                builder.setChoice(SLOTS[index], ing.get(normalized[r].charAt(c)));
             }
         }
-        slots.put(24, List.of(recipe.getResult()));
-        return new ParsedRecipeView(slots, Pack.CRAFTING_TABLE, -8, catalyst);
+
+        return builder.set(24, recipe.getResult()).build();
     }
 
     @Override
