@@ -19,6 +19,7 @@ public class IngredientManager {
     private static final Set<ItemStack> HIDDEN_ITEMS = ConcurrentHashMap.newKeySet();
     private static final Map<ItemStack, String> ITEM_NAMESPACES = new ConcurrentHashMap<>();
     private static final List<Function<ItemStack, ItemStack>> DEDUPLICATORS = new ArrayList<>();
+    private static final List<Function<ItemStack, ItemStack>> MODIFIERS = new ArrayList<>();
 
     private static final Map<String, Comparator<ItemStack>> NAMESPACE_COMPARATORS = new ConcurrentHashMap<>();
     private static final Map<ItemStack, Integer> CUSTOM_ORDER = new ConcurrentHashMap<>();
@@ -30,6 +31,7 @@ public class IngredientManager {
         HIDDEN_ITEMS.clear();
         ITEM_NAMESPACES.clear();
         DEDUPLICATORS.clear();
+        MODIFIERS.clear();
         NAMESPACE_COMPARATORS.clear();
         CUSTOM_ORDER.clear();
         ORDER_COUNTER.set(0);
@@ -43,6 +45,10 @@ public class IngredientManager {
         DEDUPLICATORS.add(deduplicator);
     }
 
+    public static void addModifier(Function<ItemStack, ItemStack> modifier) {
+        MODIFIERS.add(modifier);
+    }
+
     public static void setNamespaceComparator(String namespace, Comparator<ItemStack> comparator) {
         NAMESPACE_COMPARATORS.put(namespace.toLowerCase(Locale.ROOT), comparator);
     }
@@ -51,6 +57,15 @@ public class IngredientManager {
         if (item == null || item.isEmpty()) return item;
         ItemStack current = item;
         for (Function<ItemStack, ItemStack> func : DEDUPLICATORS) {
+            current = func.apply(current);
+        }
+        return current;
+    }
+
+    public static ItemStack applyModifiers(ItemStack item) {
+        if (item == null || item.isEmpty()) return item;
+        ItemStack current = item;
+        for (Function<ItemStack, ItemStack> func : MODIFIERS) {
             current = func.apply(current);
         }
         return current;

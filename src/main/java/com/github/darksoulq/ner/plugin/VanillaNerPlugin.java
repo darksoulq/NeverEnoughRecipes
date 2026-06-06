@@ -5,6 +5,9 @@ import com.github.darksoulq.abyssallib.world.data.tag.Tag;
 import com.github.darksoulq.abyssallib.world.data.tag.impl.ItemTag;
 import com.github.darksoulq.ner.layout.impl.*;
 import com.github.darksoulq.ner.registry.IngredientManager;
+import com.github.darksoulq.ner.registry.RecipeManager;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ItemLore;
 import io.papermc.paper.potion.PotionMix;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -15,6 +18,7 @@ import org.bukkit.inventory.*;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 
 public class VanillaNerPlugin implements NerPlugin {
 
@@ -67,8 +71,10 @@ public class VanillaNerPlugin implements NerPlugin {
         });
 
         registry.addFilter(":", (term, item) -> {
-            if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) return false;
-            for (Component line : item.getItemMeta().lore()) {
+            if (!item.hasData(DataComponentTypes.LORE)) return false;
+            ItemLore lore = item.getData(DataComponentTypes.LORE);
+            if (lore == null || lore.lines().isEmpty()) return false;
+            for (Component line : lore.lines()) {
                 if (PlainTextComponentSerializer.plainText().serialize(line).toLowerCase(Locale.ROOT).contains(term)) {
                     return true;
                 }
@@ -86,6 +92,21 @@ public class VanillaNerPlugin implements NerPlugin {
             }
             return false;
         });
+
+        registry.addFilter("$", (term, item) -> !RecipeManager.getRecipes(item).stream()
+            .filter(recipe -> recipe.provider() != null && !recipe.provider().isEmpty())
+            .filter(recipe -> {
+                Component nameComp = recipe.provider().hasData(DataComponentTypes.CUSTOM_NAME) ? recipe.provider().getData(DataComponentTypes.CUSTOM_NAME) : (recipe.provider().hasData(DataComponentTypes.ITEM_NAME) ? recipe.provider().getData(DataComponentTypes.ITEM_NAME) : Component.text(recipe.provider().getType().name()));
+                return PlainTextComponentSerializer.plainText().serialize(nameComp).toLowerCase(Locale.ROOT).contains(term);
+            })
+            .toList().isEmpty() ||
+            !RecipeManager.getUses(item).stream()
+                .filter(recipe -> recipe.provider() != null && !recipe.provider().isEmpty())
+                .filter(recipe -> {
+                    Component nameComp = recipe.provider().hasData(DataComponentTypes.CUSTOM_NAME) ? recipe.provider().getData(DataComponentTypes.CUSTOM_NAME) : (recipe.provider().hasData(DataComponentTypes.ITEM_NAME) ? recipe.provider().getData(DataComponentTypes.ITEM_NAME) : Component.text(recipe.provider().getType().name()));
+                    return PlainTextComponentSerializer.plainText().serialize(nameComp).toLowerCase(Locale.ROOT).contains(term);
+                })
+                .toList().isEmpty());
 
         registry.addCategory(new ShapedCategory());
         registry.addCatalyst(ShapedRecipe.class, new ItemStack(Material.CRAFTING_TABLE));

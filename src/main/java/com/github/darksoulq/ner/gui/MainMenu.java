@@ -11,7 +11,6 @@ import com.github.darksoulq.abyssallib.world.gui.element.GuiButton;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiItem;
 import com.github.darksoulq.abyssallib.world.gui.element.StateCycleElement;
 import com.github.darksoulq.abyssallib.world.gui.layer.PagedLayer;
-import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.model.ControlAction;
 import com.github.darksoulq.ner.registry.IngredientManager;
 import com.github.darksoulq.ner.registry.RecipeManager;
@@ -26,10 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MenuType;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 public class MainMenu {
     public enum FilterMode {
@@ -68,7 +64,10 @@ public class MainMenu {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
 
         PagedLayer<ItemStack> topLayer = PagedLayer.of(IngredientManager.getItems(), TOP_SLOTS, GuiView.Segment.TOP,
-            (item, index) -> new GuiButton(item, ctx -> handleItemClick(ctx.view(), item, ctx.clickType(), mode, topPage, bottomPage))
+            (item, index) -> {
+                ItemStack display = IngredientManager.applyModifiers(item.clone());
+                return new GuiButton(display, ctx -> handleItemClick(ctx.view(), item, ctx.clickType(), mode, topPage, bottomPage));
+            }
         );
 
         List<ItemStack> bottomSource = new ArrayList<>();
@@ -91,7 +90,11 @@ public class MainMenu {
         PagedLayer<ItemStack> bottomLayer = PagedLayer.of(bottomSource, bottomSlots, GuiView.Segment.BOTTOM,
             (item, index) -> {
                 if (item == null || item.isEmpty()) return new GuiItem(ItemStack.empty());
-                return new GuiButton(item, ctx -> handleItemClick(ctx.view(), item, ctx.clickType(), mode, topPage, bottomPage));
+                ItemStack display = item.clone();
+                if (mode != FilterMode.INVENTORY) {
+                    display = IngredientManager.applyModifiers(display);
+                }
+                return new GuiButton(display, ctx -> handleItemClick(ctx.view(), item, ctx.clickType(), mode, topPage, bottomPage));
             }
         );
 

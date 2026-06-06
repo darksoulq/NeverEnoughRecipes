@@ -1,7 +1,7 @@
 name: NeverEnoughRecipes
-version: '1.0.0-mc.26.1.2'
+version: '1.1.0-mc.26.1.2'
 main: com.github.darksoulq.ner.NeverEnoughRecipes
-api-version: '26.1'
+api-version: '26.1.2'
 authors: [ DarkSoul ]
 
 folia-supported: true

@@ -18,6 +18,7 @@ public interface Registration {
     void removeItems(Predicate<ItemStack> predicate);
 
     void addDeduplicator(Function<ItemStack, ItemStack> deduplicator);
+    void addModifier(Function<ItemStack, ItemStack> modifier);
 
     void addFilter(String prefix, BiFunction<String, ItemStack, Boolean> filter);
 

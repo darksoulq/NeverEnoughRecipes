@@ -43,19 +43,22 @@ public class SearchMenu {
         final String[] activeInput = { "" };
 
         PagedLayer<ItemStack> page = PagedLayer.of(allItems, SLOTS, com.github.darksoulq.abyssallib.world.gui.GuiView.Segment.BOTTOM,
-            (item, index) -> new GuiButton(item, ctx -> {
-                PlayerSettings settings = UserManager.get(player.getUniqueId());
-                ControlAction action = settings.resolveAction(ctx.clickType());
-                if (action == null) return;
+            (item, _) -> {
+                ItemStack display = IngredientManager.applyModifiers(item.clone());
+                return new GuiButton(display, ctx -> {
+                    PlayerSettings settings = UserManager.get(player.getUniqueId());
+                    ControlAction action = settings.resolveAction(ctx.clickType());
+                    if (action == null) return;
 
-                if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
-                    InventoryBackupManager.transition(ctx.view());
-                    GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.RECIPE));
-                } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
-                    InventoryBackupManager.transition(ctx.view());
-                    GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.USE));
-                }
-            })
+                    if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.RECIPE));
+                    } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.USE));
+                    }
+                });
+            }
         );
 
         ItemStack invisibleFiller = Items.INVISIBLE_ITEM.getStack();
