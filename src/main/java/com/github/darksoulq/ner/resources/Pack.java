@@ -23,6 +23,8 @@ public class Pack {
         ResourcePack pack = new ResourcePack(pl, "ner");
         Namespace ns = pack.namespace("ner");
 
+        ns.icon();
+
         Texture mainTex = ns.texture("gui/main");
         Texture mainInvTex = ns.texture("gui/main_inv");
         Texture searchTex = ns.texture("gui/search_menu");
@@ -49,12 +51,21 @@ public class Pack {
         createItemDef(ns, "book");
         createItemDef(ns, "search");
         createItemDef(ns, "filter");
+        createItemDef(ns, "stage");
+        createItemDef(ns, "stage_selected");
+        createItemDef(ns, "small_prev");
+        createItemDef(ns, "small_next");
 
         ns.mcmeta("item/xp", true);
 
         Lang ln = ns.lang("en_us", false);
+        ln.put("plugin.ner", "NeverEnoughRecipes");
         ln.put("item.ner.forward", "Forward");
         ln.put("item.ner.backward", "Backward");
+        ln.put("item.ner.small_prev", "Previous");
+        ln.put("item.ner.small_next", "Next");
+        ln.put("item.ner.stage", "Stage");
+        ln.put("item.ner.stage_selected", "Stage");
         ln.put("item.ner.close", "Close");
         ln.put("item.ner.xp", "Experience");
         ln.put("item.ner.book", "Never Enough Recipes");

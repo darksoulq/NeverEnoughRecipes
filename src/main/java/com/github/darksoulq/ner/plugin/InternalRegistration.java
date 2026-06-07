@@ -3,6 +3,7 @@ package com.github.darksoulq.ner.plugin;
 import com.github.darksoulq.ner.layout.RecipeCategory;
 import com.github.darksoulq.ner.registry.IngredientManager;
 import com.github.darksoulq.ner.registry.RecipeManager;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Comparator;
@@ -47,7 +48,7 @@ public class InternalRegistration implements Registration {
     }
 
     @Override
-    public void addModifier(Function<ItemStack, ItemStack> modifier) {
+    public void addModifier(BiFunction<Player, ItemStack, ItemStack> modifier) {
         IngredientManager.addModifier(modifier);
     }
 

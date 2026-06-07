@@ -3,6 +3,7 @@ package com.github.darksoulq.ner.registry;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
@@ -18,23 +19,28 @@ public class IngredientManager {
     private static final Set<ItemStack> ALL_ITEMS = ConcurrentHashMap.newKeySet();
     private static final Set<ItemStack> HIDDEN_ITEMS = ConcurrentHashMap.newKeySet();
     private static final Map<ItemStack, String> ITEM_NAMESPACES = new ConcurrentHashMap<>();
+    private static final Map<ItemStack, String> ITEM_SEARCH_CACHE = new ConcurrentHashMap<>();
     private static final List<Function<ItemStack, ItemStack>> DEDUPLICATORS = new ArrayList<>();
-    private static final List<Function<ItemStack, ItemStack>> MODIFIERS = new ArrayList<>();
+    private static final List<BiFunction<Player, ItemStack, ItemStack>> MODIFIERS = new ArrayList<>();
 
     private static final Map<String, Comparator<ItemStack>> NAMESPACE_COMPARATORS = new ConcurrentHashMap<>();
     private static final Map<ItemStack, Integer> CUSTOM_ORDER = new ConcurrentHashMap<>();
     private static final AtomicInteger ORDER_COUNTER = new AtomicInteger(0);
+
+    private static List<ItemStack> CACHED_SORTED_ITEMS = null;
 
     public static void clear() {
         FILTERS.clear();
         ALL_ITEMS.clear();
         HIDDEN_ITEMS.clear();
         ITEM_NAMESPACES.clear();
+        ITEM_SEARCH_CACHE.clear();
         DEDUPLICATORS.clear();
         MODIFIERS.clear();
         NAMESPACE_COMPARATORS.clear();
         CUSTOM_ORDER.clear();
         ORDER_COUNTER.set(0);
+        CACHED_SORTED_ITEMS = null;
     }
 
     public static void addFilter(String prefix, BiFunction<String, ItemStack, Boolean> filter) {
@@ -45,7 +51,7 @@ public class IngredientManager {
         DEDUPLICATORS.add(deduplicator);
     }
 
-    public static void addModifier(Function<ItemStack, ItemStack> modifier) {
+    public static void addModifier(BiFunction<Player, ItemStack, ItemStack> modifier) {
         MODIFIERS.add(modifier);
     }
 
@@ -62,11 +68,11 @@ public class IngredientManager {
         return current;
     }
 
-    public static ItemStack applyModifiers(ItemStack item) {
+    public static ItemStack applyModifiers(Player player, ItemStack item) {
         if (item == null || item.isEmpty()) return item;
         ItemStack current = item;
-        for (Function<ItemStack, ItemStack> func : MODIFIERS) {
-            current = func.apply(current);
+        for (BiFunction<Player, ItemStack, ItemStack> func : MODIFIERS) {
+            current = func.apply(player, current);
         }
         return current;
     }
@@ -79,6 +85,11 @@ public class IngredientManager {
             String ns = normalized.getType().getKey().getNamespace();
             ITEM_NAMESPACES.putIfAbsent(normalized, ns);
             CUSTOM_ORDER.putIfAbsent(normalized, ORDER_COUNTER.getAndIncrement());
+
+            Component comp = normalized.hasData(DataComponentTypes.CUSTOM_NAME) ? normalized.getData(DataComponentTypes.CUSTOM_NAME) : (normalized.hasData(DataComponentTypes.ITEM_NAME) ? normalized.getData(DataComponentTypes.ITEM_NAME) : Component.text(normalized.getType().name()));
+            ITEM_SEARCH_CACHE.put(normalized, PlainTextComponentSerializer.plainText().serialize(comp).toLowerCase(Locale.ROOT));
+
+            CACHED_SORTED_ITEMS = null;
         }
     }
 
@@ -89,6 +100,11 @@ public class IngredientManager {
             ALL_ITEMS.add(normalized);
             ITEM_NAMESPACES.put(normalized, namespace);
             CUSTOM_ORDER.putIfAbsent(normalized, ORDER_COUNTER.getAndIncrement());
+
+            Component comp = normalized.hasData(DataComponentTypes.CUSTOM_NAME) ? normalized.getData(DataComponentTypes.CUSTOM_NAME) : (normalized.hasData(DataComponentTypes.ITEM_NAME) ? normalized.getData(DataComponentTypes.ITEM_NAME) : Component.text(normalized.getType().name()));
+            ITEM_SEARCH_CACHE.put(normalized, PlainTextComponentSerializer.plainText().serialize(comp).toLowerCase(Locale.ROOT));
+
+            CACHED_SORTED_ITEMS = null;
         }
     }
 
@@ -98,19 +114,23 @@ public class IngredientManager {
         HIDDEN_ITEMS.add(normalized);
         ALL_ITEMS.remove(normalized);
         ITEM_NAMESPACES.remove(normalized);
+        ITEM_SEARCH_CACHE.remove(normalized);
         CUSTOM_ORDER.remove(normalized);
+        CACHED_SORTED_ITEMS = null;
     }
 
     public static void removeItems(Predicate<ItemStack> predicate) {
-        ALL_ITEMS.removeIf(item -> {
+        boolean removed = ALL_ITEMS.removeIf(item -> {
             if (predicate.test(item)) {
                 HIDDEN_ITEMS.add(item);
                 ITEM_NAMESPACES.remove(item);
+                ITEM_SEARCH_CACHE.remove(item);
                 CUSTOM_ORDER.remove(item);
                 return true;
             }
             return false;
         });
+        if (removed) CACHED_SORTED_ITEMS = null;
     }
 
     public static boolean isHidden(ItemStack item) {
@@ -156,9 +176,12 @@ public class IngredientManager {
     }
 
     public static List<ItemStack> getItems() {
-        List<ItemStack> list = new ArrayList<>(ALL_ITEMS);
-        sortItems(list);
-        return list;
+        if (CACHED_SORTED_ITEMS == null) {
+            List<ItemStack> list = new ArrayList<>(ALL_ITEMS);
+            sortItems(list);
+            CACHED_SORTED_ITEMS = list;
+        }
+        return CACHED_SORTED_ITEMS;
     }
 
     public static List<ItemStack> search(String query) {
@@ -177,10 +200,7 @@ public class IngredientManager {
         }
 
         if (results == null) {
-            results = ALL_ITEMS.stream().filter(item -> {
-                Component comp = item.hasData(DataComponentTypes.CUSTOM_NAME) ? item.getData(DataComponentTypes.CUSTOM_NAME) : (item.hasData(DataComponentTypes.ITEM_NAME) ? item.getData(DataComponentTypes.ITEM_NAME) : Component.text(item.getType().name()));
-                return PlainTextComponentSerializer.plainText().serialize(comp).toLowerCase(Locale.ROOT).contains(lowerQuery);
-            }).collect(Collectors.toList());
+            results = ALL_ITEMS.stream().filter(item -> ITEM_SEARCH_CACHE.getOrDefault(item, "").contains(lowerQuery)).collect(Collectors.toList());
         }
 
         sortItems(results);

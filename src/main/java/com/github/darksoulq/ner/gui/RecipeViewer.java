@@ -14,6 +14,7 @@ import com.github.darksoulq.ner.gui.element.GuiAnimatedButton;
 import com.github.darksoulq.ner.model.ControlAction;
 import com.github.darksoulq.ner.model.PagedSection;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
+import com.github.darksoulq.ner.model.RecipeStage;
 import com.github.darksoulq.ner.registry.IngredientManager;
 import com.github.darksoulq.ner.registry.RecipeManager;
 import com.github.darksoulq.ner.resources.UiItems;
@@ -32,6 +33,7 @@ import org.bukkit.inventory.MenuType;
 
 import java.util.*;
 
+@SuppressWarnings("UnstableApiUsage")
 public class RecipeViewer {
     public enum Type { RECIPE, USE }
 
@@ -41,128 +43,178 @@ public class RecipeViewer {
         27, 28, 29, 30, 31, 32, 33, 34, 35
     };
 
-    public static Gui create(ItemStack target, Type type) {
-        return create(target, type, 0, 0, 0);
+    private static final int[] STAGE_SLOTS = { 1, 2, 3, 5, 6, 7 };
+
+    public static Gui create(Player player, ItemStack target, Type type) {
+        return create(player, target, type, 0, 0, 0, 0, 0);
     }
 
-    public static Gui create(ItemStack target, Type type, int categoryOffset, int recipePage) {
-        return create(target, type, categoryOffset, recipePage, 0);
+    public static Gui create(Player player, ItemStack target, Type type, int categoryOffset, int recipePage) {
+        return create(player, target, type, categoryOffset, recipePage, 0, 0, 0);
     }
 
-    public static Gui create(ItemStack target, Type type, int categoryOffset, int recipePage, int subPage) {
-        List<ParsedRecipeView> allRecipes = type == Type.RECIPE ? RecipeManager.getRecipes(target) : RecipeManager.getUses(target);
-        if (allRecipes.isEmpty()) return MainMenu.create(null);
+    public static Gui create(Player player, ItemStack target, Type type, int categoryOffset, int recipePage, int subPage) {
+        return create(player, target, type, categoryOffset, recipePage, subPage, 0, 0);
+    }
 
-        Map<ItemStack, List<ParsedRecipeView>> grouped = new LinkedHashMap<>();
+    public static Gui create(Player player, ItemStack target, Type type, int categoryOffset, int recipePage, int subPage, int stageIndex, int stagePage) {
+        final List<ParsedRecipeView> allRecipes = type == Type.RECIPE ? RecipeManager.getRecipes(target) : RecipeManager.getUses(target);
+        if (allRecipes.isEmpty()) return MainMenu.create(player);
+
+        final Map<ItemStack, List<ParsedRecipeView>> grouped = new LinkedHashMap<>();
         for (ParsedRecipeView v : allRecipes) {
             grouped.computeIfAbsent(v.provider(), k -> new ArrayList<>()).add(v);
         }
 
-        List<ItemStack> categories = new ArrayList<>(grouped.keySet());
-        int safeCategoryOffset = (categoryOffset % categories.size() + categories.size()) % categories.size();
-        ItemStack currentCategory = categories.get(safeCategoryOffset);
-        List<ParsedRecipeView> activeRecipes = grouped.get(currentCategory);
+        final List<ItemStack> categories = new ArrayList<>(grouped.keySet());
+        final int safeCategoryOffset = (categoryOffset % categories.size() + categories.size()) % categories.size();
+        final ItemStack currentCategory = categories.get(safeCategoryOffset);
+        final List<ParsedRecipeView> activeRecipes = grouped.get(currentCategory);
 
-        int safeRecipePage = (recipePage % activeRecipes.size() + activeRecipes.size()) % activeRecipes.size();
-        ParsedRecipeView currentView = activeRecipes.get(safeRecipePage);
+        final int safeRecipePage = (recipePage % activeRecipes.size() + activeRecipes.size()) % activeRecipes.size();
+        final ParsedRecipeView currentView = activeRecipes.get(safeRecipePage);
 
-        Gui.Builder builder = Gui.builder(MenuType.GENERIC_9X6, TextUtil.parse("<white><offset><texture></white><width><title>",
-                Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(currentView.offset())),
-                Placeholder.parsed("texture", currentView.texture().toMiniMessageString()),
+        final List<RecipeStage> viewStages = currentView.stages();
+        final int safeStageIndex = Math.max(0, Math.min(stageIndex, viewStages.size() - 1));
+        final RecipeStage activeStage = viewStages.get(safeStageIndex);
+
+        final Gui.Builder builder = Gui.builder(MenuType.GENERIC_9X6, TextUtil.parse("<white><offset><texture></white><width><title>",
+                Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(activeStage.offset())),
+                Placeholder.parsed("texture", activeStage.texture().toMiniMessageString()),
                 Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
                 Placeholder.parsed("title", type == Type.RECIPE ? "Recipes" : "Uses")))
             .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
             .set(SlotPosition.top(48), new GuiButton(UiItems.PREV.getStack(), ctx -> {
                 InventoryBackupManager.transition(ctx.view());
-                GuiManager.open(ctx.view().getPlayer(), create(target, type, safeCategoryOffset, safeRecipePage - 1, 0));
+                GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage - 1, 0, 0, 0));
             }))
             .set(SlotPosition.top(50), new GuiButton(UiItems.NEXT.getStack(), ctx -> {
                 InventoryBackupManager.transition(ctx.view());
-                GuiManager.open(ctx.view().getPlayer(), create(target, type, safeCategoryOffset, safeRecipePage + 1, 0));
+                GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage + 1, 0, 0, 0));
             }))
             .set(SlotPosition.top(53), new GuiButton(UiItems.CLOSE.getStack(), ctx -> {
                 InventoryBackupManager.transition(ctx.view());
-                GuiManager.open(ctx.view().getPlayer(), MainMenu.create(ctx.view().getPlayer()));
+                GuiManager.open(player, MainMenu.create(player));
             }));
 
-        for (Map.Entry<Integer, List<ItemStack>> entry : currentView.slots().entrySet()) {
-            int slot = entry.getKey();
-            List<ItemStack> cycled = entry.getValue();
+        if (viewStages.size() > 1) {
+            final int stagePageCount = (int) Math.ceil((double) viewStages.size() / STAGE_SLOTS.length);
+            final int safeStagePage = Math.max(0, Math.min(stagePage, stagePageCount - 1));
+            final int stageStartIdx = safeStagePage * STAGE_SLOTS.length;
+
+            for (int i = 0; i < STAGE_SLOTS.length && (stageStartIdx + i) < viewStages.size(); i++) {
+                final int actualStageIdx = stageStartIdx + i;
+                final int slot = STAGE_SLOTS[i];
+
+                final ItemStack icon = actualStageIdx == safeStageIndex ? UiItems.STAGE_SELECTED.getStack().clone() : UiItems.STAGE.getStack().clone();
+                icon.setData(DataComponentTypes.ITEM_NAME, TextUtil.parse("<aqua>Stage " + (actualStageIdx + 1) + "</aqua>"));
+
+                builder.set(SlotPosition.top(slot), new GuiButton(icon, ctx -> {
+                    if (actualStageIdx != safeStageIndex) {
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage, 0, actualStageIdx, safeStagePage));
+                    }
+                }));
+            }
+
+            if (stagePageCount > 1) {
+                if (safeStagePage > 0) {
+                    builder.set(SlotPosition.top(0), new GuiButton(UiItems.SMALL_PREV.getStack(), ctx -> {
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage, subPage, safeStageIndex, safeStagePage - 1));
+                    }));
+                }
+                if (safeStagePage < stagePageCount - 1) {
+                    builder.set(SlotPosition.top(8), new GuiButton(UiItems.SMALL_NEXT.getStack(), ctx -> {
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage, subPage, safeStageIndex, safeStagePage + 1));
+                    }));
+                }
+            }
+        }
+
+        for (Map.Entry<Integer, List<ItemStack>> entry : activeStage.slots().entrySet()) {
+            final int slot = entry.getKey();
+            final List<ItemStack> cycled = entry.getValue();
             if (cycled.isEmpty()) continue;
 
-            List<ItemStack> displayCycled = new ArrayList<>();
+            final List<ItemStack> displayCycled = new ArrayList<>(cycled.size());
 
             for (ItemStack st : cycled) {
-                ItemStack display = IngredientManager.applyModifiers(st.clone());
-                String probExpr = currentView.probabilities().get(st);
+                ItemStack display = IngredientManager.applyModifiers(player, st.clone());
+                String probExpr = activeStage.probabilities().get(st);
                 if (probExpr != null) applyProbabilityLore(display, probExpr);
                 displayCycled.add(display);
             }
 
             if (cycled.size() == 1) {
                 builder.set(SlotPosition.top(slot), new GuiButton(displayCycled.getFirst(), ctx ->
-                    handleItemClick(ctx.view().getPlayer(), ctx.view(), cycled.getFirst(), ctx.clickType())
+                    handleItemClick(player, ctx.view(), cycled.getFirst(), ctx.clickType())
                 ));
             } else {
                 builder.set(SlotPosition.top(slot), new GuiAnimatedButton(displayCycled, 20, ctx -> {
                     ItemStack clickedDisplay = ctx.currentItem();
                     int idx = displayCycled.indexOf(clickedDisplay);
                     ItemStack original = idx != -1 ? cycled.get(idx) : cycled.getFirst();
-                    handleItemClick(ctx.view().getPlayer(), ctx.view(), original, ctx.clickType());
+                    handleItemClick(player, ctx.view(), original, ctx.clickType());
                 }));
             }
         }
 
         int maxSectionPages = 1;
 
-        for (PagedSection section : currentView.pagedSections()) {
-            int[] targetSlots = section.slots();
-            List<ItemStack> items = section.items();
+        for (PagedSection section : activeStage.pagedSections()) {
+            final int[] targetSlots = section.slots();
+            final List<ItemStack> items = section.items();
             if (targetSlots == null || targetSlots.length == 0 || items == null || items.isEmpty()) continue;
 
-            int slotsPerPage = targetSlots.length;
-            int pages = (int) Math.ceil((double) items.size() / slotsPerPage);
+            final int slotsPerPage = targetSlots.length;
+            final int pages = (int) Math.ceil((double) items.size() / slotsPerPage);
             if (pages > maxSectionPages) maxSectionPages = pages;
 
-            int currentSectionPage = (subPage % pages + pages) % pages;
-            int start = currentSectionPage * slotsPerPage;
+            final int currentSectionPage = Math.max(0, Math.min(subPage, pages - 1));
+            final int start = currentSectionPage * slotsPerPage;
 
             for (int i = 0; i < slotsPerPage && (start + i) < items.size(); i++) {
-                ItemStack originalItem = items.get(start + i);
+                final ItemStack originalItem = items.get(start + i);
                 if (originalItem != null && !originalItem.isEmpty()) {
-                    int slot = targetSlots[i];
-                    ItemStack displayItem = IngredientManager.applyModifiers(originalItem.clone());
-                    String probExpr = currentView.probabilities().get(originalItem);
+                    final int slot = targetSlots[i];
+                    final ItemStack displayItem = IngredientManager.applyModifiers(player, originalItem.clone());
+                    String probExpr = activeStage.probabilities().get(originalItem);
                     if (probExpr != null) applyProbabilityLore(displayItem, probExpr);
 
                     builder.set(SlotPosition.top(slot), new GuiButton(displayItem, ctx ->
-                        handleItemClick(ctx.view().getPlayer(), ctx.view(), originalItem, ctx.clickType())
+                        handleItemClick(player, ctx.view(), originalItem, ctx.clickType())
                     ));
                 }
             }
 
             if (pages > 1) {
-                if (section.prevButton() != null && section.prevButton().slot() != -1) {
+                if (section.prevButton() != null && section.prevButton().slot() != -1 && currentSectionPage > 0) {
                     ItemStack icon = section.prevButton().item() != null ? section.prevButton().item() : UiItems.PREV.getStack();
                     builder.set(SlotPosition.top(section.prevButton().slot()), new GuiButton(icon, ctx -> {
                         InventoryBackupManager.transition(ctx.view());
-                        GuiManager.open(ctx.view().getPlayer(), create(target, type, safeCategoryOffset, safeRecipePage, subPage - 1));
+                        GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage, currentSectionPage - 1, safeStageIndex, stagePage));
                     }));
                 }
-                if (section.nextButton() != null && section.nextButton().slot() != -1) {
+                if (section.nextButton() != null && section.nextButton().slot() != -1 && currentSectionPage < pages - 1) {
                     ItemStack icon = section.nextButton().item() != null ? section.nextButton().item() : UiItems.NEXT.getStack();
                     builder.set(SlotPosition.top(section.nextButton().slot()), new GuiButton(icon, ctx -> {
                         InventoryBackupManager.transition(ctx.view());
-                        GuiManager.open(ctx.view().getPlayer(), create(target, type, safeCategoryOffset, safeRecipePage, subPage + 1));
+                        GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage, currentSectionPage + 1, safeStageIndex, stagePage));
                     }));
                 }
             }
         }
 
-        ItemStack pageIndicator = new ItemStack(Material.BOOK);
+        final ItemStack pageIndicator = new ItemStack(Material.BOOK);
         pageIndicator.setData(DataComponentTypes.ITEM_NAME, TextUtil.parse("<green>Page</green>"));
-        List<Component> loreLines = new ArrayList<>();
+        final List<Component> loreLines = new ArrayList<>();
         loreLines.add(TextUtil.parse("<green>" + (safeRecipePage + 1) + " <gray>of</gray> " + activeRecipes.size() + "</green>"));
+
+        if (viewStages.size() > 1) {
+            loreLines.add(TextUtil.parse("<aqua>Stage " + (safeStageIndex + 1) + " <gray>of</gray> " + viewStages.size() + "</aqua>"));
+        }
 
         if (maxSectionPages > 1) {
             int displaySubPage = (subPage % maxSectionPages + maxSectionPages) % maxSectionPages;
@@ -172,7 +224,7 @@ public class RecipeViewer {
         pageIndicator.setData(DataComponentTypes.LORE, ItemLore.lore().lines(loreLines).build());
         builder.set(SlotPosition.top(49), new GuiItem(pageIndicator));
 
-        PagedLayer<ItemStack> providersLayer = PagedLayer.of(categories, PROVIDER_SLOTS, GuiView.Segment.BOTTOM,
+        final PagedLayer<ItemStack> providersLayer = PagedLayer.of(categories, PROVIDER_SLOTS, GuiView.Segment.BOTTOM,
             (cat, index) -> {
                 ItemStack display = cat.clone();
                 if (index == safeCategoryOffset) {
@@ -180,7 +232,7 @@ public class RecipeViewer {
                 }
                 return new GuiButton(display, ctx -> {
                     InventoryBackupManager.transition(ctx.view());
-                    GuiManager.open(ctx.view().getPlayer(), create(target, type, index, 0, 0));
+                    GuiManager.open(player, create(player, target, type, index, 0, 0, 0, 0));
                 });
             }
         );
@@ -223,10 +275,10 @@ public class RecipeViewer {
 
         if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
             InventoryBackupManager.transition(view);
-            GuiManager.open(player, create(item, Type.RECIPE, 0, 0, 0));
+            GuiManager.open(player, create(player, item, Type.RECIPE, 0, 0, 0, 0, 0));
         } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
             InventoryBackupManager.transition(view);
-            GuiManager.open(player, create(item, Type.USE, 0, 0, 0));
+            GuiManager.open(player, create(player, item, Type.USE, 0, 0, 0, 0, 0));
         }
     }
 }

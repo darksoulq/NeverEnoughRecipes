@@ -27,6 +27,7 @@ import org.bukkit.inventory.MenuType;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("UnstableApiUsage")
 public class MainMenu {
     public enum FilterMode {
         RECENT("<!italic><gray>Mode: <white>Recent"),
@@ -65,7 +66,7 @@ public class MainMenu {
 
         PagedLayer<ItemStack> topLayer = PagedLayer.of(IngredientManager.getItems(), TOP_SLOTS, GuiView.Segment.TOP,
             (item, index) -> {
-                ItemStack display = IngredientManager.applyModifiers(item.clone());
+                ItemStack display = IngredientManager.applyModifiers(player, item.clone());
                 return new GuiButton(display, ctx -> handleItemClick(ctx.view(), item, ctx.clickType(), mode, topPage, bottomPage));
             }
         );
@@ -92,7 +93,7 @@ public class MainMenu {
                 if (item == null || item.isEmpty()) return new GuiItem(ItemStack.empty());
                 ItemStack display = item.clone();
                 if (mode != FilterMode.INVENTORY) {
-                    display = IngredientManager.applyModifiers(display);
+                    display = IngredientManager.applyModifiers(player, display);
                 }
                 return new GuiButton(display, ctx -> handleItemClick(ctx.view(), item, ctx.clickType(), mode, topPage, bottomPage));
             }
@@ -150,11 +151,11 @@ public class MainMenu {
         if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
             InventoryBackupManager.transition(view);
             addToRecents(player, item);
-            GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.RECIPE));
+            GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.RECIPE));
         } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
             InventoryBackupManager.transition(view);
             addToRecents(player, item);
-            GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.USE));
+            GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.USE));
         } else if (action == ControlAction.TOGGLE_BOOKMARK) {
             toggleBookmark(player, item);
             InventoryBackupManager.transition(view);

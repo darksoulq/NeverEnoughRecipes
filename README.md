@@ -91,11 +91,12 @@ Replace `<version>` with the latest GitHub release.
 
 ## Creating a Recipe Category
 
-The layout system has been redesigned into `RecipeCategory`. You can now easily define static slots, recipe choices, probabilities, and paginated sections (mini-pages) via the `ParsedRecipeView.Builder`.
+The layout system has been redesigned into `RecipeCategory`. You can now easily define static slots, recipe choices, probabilities, paginated sections (mini-pages), and sequential progression stages via the `ParsedRecipeView.Builder` and `RecipeStage.Builder`.
 
 ```java
 import com.github.darksoulq.ner.layout.RecipeCategory;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
+import com.github.darksoulq.ner.model.RecipeStage;
 import com.github.darksoulq.ner.model.PagedSection;
 import com.github.darksoulq.ner.model.SectionButton;
 import org.bukkit.inventory.ItemStack;
@@ -111,7 +112,7 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
 
     @Override
     public ParsedRecipeView parseRecipe(YourRecipeClass recipe, ItemStack catalyst) {
-        return ParsedRecipeView.builder(texture, offset, catalyst)
+        ParsedRecipeView.Builder builder = ParsedRecipeView.builder(baseTexture, baseOffset, catalyst)
             .set(4, recipe.getInput())
             .setChoice(5, recipe.getIngredientChoice())
             .probability(recipe.getPrimaryOutput(), "50%")
@@ -121,8 +122,16 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
                 recipe.getOutputs(), 
                 new SectionButton(9, previousIconStack), 
                 new SectionButton(14, nextIconStack)     
-            ))
-            .build();
+            ));
+
+        for (int i = 0; i < recipe.getExtraStepsCount(); i++) {
+            builder.addStage(RecipeStage.builder(stepTexture, stepOffset)
+                .set(20, recipe.getStepInput(i))
+                .set(24, recipe.getStepOutput(i))
+                .build());
+        }
+
+        return builder.build();
     }
 
     @Override
@@ -145,6 +154,7 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
 * **Catalyst**: The provider item (e.g. Crafting Table) is passed to the parser automatically by the registry.
 * **Probabilities**: Use `.probability(itemStack, expression/float)` to append chance notations to the lore of displayed items.
 * **Paged Sections**: Pass a `PagedSection` to automatically chunk large lists of items into smaller navigable areas within the same view.
+* **Recipe Stages**: For recipes requiring multi-step sequential processes, use `.addStage(RecipeStage)` to append standalone view definitions (supporting separate slots, textures, probabilities, and sections) that the player can paginate through.
 
 ---
 

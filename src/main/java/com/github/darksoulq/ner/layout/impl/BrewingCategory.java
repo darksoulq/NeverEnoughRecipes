@@ -6,7 +6,8 @@ import com.github.darksoulq.ner.resources.Pack;
 import io.papermc.paper.potion.PotionMix;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Set;
 
 public class BrewingCategory extends RecipeCategory<PotionMix> {
     private static final int[] SLOTS = { 12, 30, 23 };
@@ -18,11 +19,11 @@ public class BrewingCategory extends RecipeCategory<PotionMix> {
 
     @Override
     public ParsedRecipeView parseRecipe(PotionMix recipe, ItemStack catalyst) {
-        Map<Integer, List<ItemStack>> slots = new HashMap<>();
-        applyChoice(slots, SLOTS[0], recipe.getIngredient());
-        applyChoice(slots, SLOTS[1], recipe.getInput());
-        slots.put(SLOTS[2], List.of(recipe.getResult()));
-        return new ParsedRecipeView(slots, Pack.BREWING, -8, catalyst);
+        return ParsedRecipeView.builder(Pack.BREWING, -8, catalyst)
+            .setChoice(SLOTS[0], recipe.getIngredient())
+            .setChoice(SLOTS[1], recipe.getInput())
+            .set(SLOTS[2], recipe.getResult())
+            .build();
     }
 
     @Override

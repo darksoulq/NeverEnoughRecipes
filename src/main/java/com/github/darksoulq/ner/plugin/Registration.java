@@ -1,6 +1,7 @@
 package com.github.darksoulq.ner.plugin;
 
 import com.github.darksoulq.ner.layout.RecipeCategory;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Comparator;
@@ -18,7 +19,7 @@ public interface Registration {
     void removeItems(Predicate<ItemStack> predicate);
 
     void addDeduplicator(Function<ItemStack, ItemStack> deduplicator);
-    void addModifier(Function<ItemStack, ItemStack> modifier);
+    void addModifier(BiFunction<Player, ItemStack, ItemStack> modifier);
 
     void addFilter(String prefix, BiFunction<String, ItemStack, Boolean> filter);
 

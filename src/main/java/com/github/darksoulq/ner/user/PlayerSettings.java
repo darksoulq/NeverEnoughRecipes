@@ -19,7 +19,7 @@ public class PlayerSettings {
     public final Config.Value<List<ItemStack>> recents;
 
     public PlayerSettings(UUID uuid) {
-        this.config = new Config("ner", uuid.toString(), "users");
+        this.config = new Config("ner", uuid.toString(), "users").schema(1).apply();
         
         Map<ControlAction, ClickType> defaultBinds = new EnumMap<>(ControlAction.class);
         for (ControlAction action : ControlAction.values()) {

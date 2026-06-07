@@ -4,97 +4,77 @@ import com.github.darksoulq.abyssallib.server.resource.asset.Font;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public record ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Map<ItemStack, String> probabilities, List<PagedSection> pagedSections, Font.TextureGlyph texture, int offset, ItemStack provider) {
-    public ParsedRecipeView(Map<Integer, List<ItemStack>> slots, Font.TextureGlyph texture, int offset, ItemStack provider) {
-        this(slots, Map.of(), List.of(), texture, offset, provider);
-    }
+public record ParsedRecipeView(List<RecipeStage> stages, ItemStack provider) {
 
     public static Builder builder(Font.TextureGlyph texture, int offset, ItemStack provider) {
         return new Builder(texture, offset, provider);
     }
 
     public static class Builder {
-        private final Font.TextureGlyph texture;
-        private final int offset;
         private final ItemStack provider;
-        private final Map<Integer, List<ItemStack>> baseSlots = new HashMap<>();
-        private final Map<ItemStack, String> probabilities = new HashMap<>();
-        private final List<PagedSection> pagedSections = new ArrayList<>();
+        private final RecipeStage.Builder primaryStage;
+        private final List<RecipeStage> extraStages = new ArrayList<>();
 
         public Builder(Font.TextureGlyph texture, int offset, ItemStack provider) {
-            this.texture = texture;
-            this.offset = offset;
             this.provider = provider;
+            this.primaryStage = RecipeStage.builder(texture, offset);
         }
 
         public Builder set(int slot, ItemStack item) {
-            if (item != null && !item.isEmpty()) {
-                this.baseSlots.put(slot, List.of(item));
-            }
+            primaryStage.set(slot, item);
             return this;
         }
 
         public Builder set(int slot, List<ItemStack> items) {
-            if (items != null && !items.isEmpty()) {
-                this.baseSlots.put(slot, new ArrayList<>(items));
-            }
+            primaryStage.set(slot, items);
             return this;
         }
 
         public Builder setChoice(int slot, RecipeChoice choice) {
-            if (choice == null || choice.equals(RecipeChoice.empty())) return this;
-            if (choice instanceof RecipeChoice.MaterialChoice mat) {
-                this.baseSlots.put(slot, mat.getChoices().stream().map(ItemStack::new).toList());
-            } else if (choice instanceof RecipeChoice.ExactChoice exact) {
-                this.baseSlots.put(slot, new ArrayList<>(exact.getChoices()));
-            }
+            primaryStage.setChoice(slot, choice);
             return this;
         }
 
         public Builder probability(ItemStack item, String expression) {
-            if (item != null && !item.isEmpty() && expression != null && !expression.isBlank()) {
-                this.probabilities.put(item, expression);
-            }
+            primaryStage.probability(item, expression);
             return this;
         }
 
         public Builder probability(ItemStack item, float chance) {
-            String formatted = String.valueOf(chance);
-            if (formatted.endsWith(".0")) {
-                formatted = formatted.substring(0, formatted.length() - 2);
-            }
-            return probability(item, formatted + "%");
+            primaryStage.probability(item, chance);
+            return this;
         }
 
         public Builder probability(List<ItemStack> items, String expression) {
-            if (items != null) {
-                for (ItemStack item : items) {
-                    probability(item, expression);
-                }
-            }
+            primaryStage.probability(items, expression);
             return this;
         }
 
         public Builder probability(List<ItemStack> items, float chance) {
-            if (items != null) {
-                for (ItemStack item : items) {
-                    probability(item, chance);
-                }
-            }
+            primaryStage.probability(items, chance);
             return this;
         }
 
         public Builder addSection(PagedSection section) {
-            if (section != null) {
-                this.pagedSections.add(section);
+            primaryStage.addSection(section);
+            return this;
+        }
+
+        public Builder addStage(RecipeStage stage) {
+            if (stage != null) {
+                this.extraStages.add(stage);
             }
             return this;
         }
 
         public ParsedRecipeView build() {
-            return new ParsedRecipeView(baseSlots, probabilities, pagedSections, texture, offset, provider);
+            List<RecipeStage> allStages = new ArrayList<>();
+            allStages.add(primaryStage.build());
+            allStages.addAll(extraStages);
+            return new ParsedRecipeView(allStages, provider);
         }
     }
 }

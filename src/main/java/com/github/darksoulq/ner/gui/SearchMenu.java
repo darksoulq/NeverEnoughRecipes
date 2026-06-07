@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+@SuppressWarnings("UnstableApiUsage")
 public class SearchMenu {
     private static final int[] SLOTS = {
         9, 10, 11, 12, 13, 14, 15, 16, 17,
@@ -44,7 +45,7 @@ public class SearchMenu {
 
         PagedLayer<ItemStack> page = PagedLayer.of(allItems, SLOTS, com.github.darksoulq.abyssallib.world.gui.GuiView.Segment.BOTTOM,
             (item, _) -> {
-                ItemStack display = IngredientManager.applyModifiers(item.clone());
+                ItemStack display = IngredientManager.applyModifiers(player, item.clone());
                 return new GuiButton(display, ctx -> {
                     PlayerSettings settings = UserManager.get(player.getUniqueId());
                     ControlAction action = settings.resolveAction(ctx.clickType());
@@ -52,10 +53,10 @@ public class SearchMenu {
 
                     if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
                         InventoryBackupManager.transition(ctx.view());
-                        GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.RECIPE));
+                        GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.RECIPE));
                     } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
                         InventoryBackupManager.transition(ctx.view());
-                        GuiManager.open(player, RecipeViewer.create(item, RecipeViewer.Type.USE));
+                        GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.USE));
                     }
                 });
             }

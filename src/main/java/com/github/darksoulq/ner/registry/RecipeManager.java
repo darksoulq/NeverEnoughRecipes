@@ -1,7 +1,9 @@
 package com.github.darksoulq.ner.registry;
 
 import com.github.darksoulq.ner.layout.RecipeCategory;
+import com.github.darksoulq.ner.model.PagedSection;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
+import com.github.darksoulq.ner.model.RecipeStage;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
@@ -73,37 +75,89 @@ public class RecipeManager {
 
             ParsedRecipeView parsed = category.parseRecipe(recipe, catalyst);
             if (parsed == null) continue;
+
             Set<Integer> results = category.getResultSlots();
             Set<Integer> ignored = category.getIgnoredSlots();
 
             boolean producesHidden = false;
-            for (Map.Entry<Integer, List<ItemStack>> entry : parsed.slots().entrySet()) {
-                if (results.contains(entry.getKey())) {
-                    for (ItemStack item : entry.getValue()) {
-                        if (IngredientManager.isHidden(item)) producesHidden = true;
+
+            for (RecipeStage stage : parsed.stages()) {
+                for (Map.Entry<Integer, List<ItemStack>> entry : stage.slots().entrySet()) {
+                    if (results.contains(entry.getKey())) {
+                        for (ItemStack item : entry.getValue()) {
+                            if (IngredientManager.isHidden(item)) {
+                                producesHidden = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (producesHidden) break;
+                }
+
+                if (!producesHidden) {
+                    for (PagedSection section : stage.pagedSections()) {
+                        if (section.slots() != null && section.slots().length > 0) {
+                            int firstSlot = section.slots()[0];
+                            if (results.contains(firstSlot)) {
+                                for (ItemStack item : section.items()) {
+                                    if (IngredientManager.isHidden(item)) {
+                                        producesHidden = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (producesHidden) break;
+                    }
+                }
+                if (producesHidden) break;
+            }
+
+            if (producesHidden) continue;
+
+            for (RecipeStage stage : parsed.stages()) {
+                processItems(stage.slots(), results, ignored, parsed);
+                for (PagedSection section : stage.pagedSections()) {
+                    if (section.slots() != null && section.slots().length > 0) {
+                        int slot = section.slots()[0];
+                        processSectionItems(section.items(), slot, results, ignored, parsed);
                     }
                 }
             }
-            if (producesHidden) continue;
-
-            parsed.slots().forEach((slot, items) -> {
-                boolean isIgnored = ignored.contains(slot);
-                boolean isResult = results.contains(slot);
-                for (ItemStack item : items) {
-                    ItemStack normalized = IngredientManager.deduplicate(item.asOne());
-                    if (isIgnored || IngredientManager.isHidden(normalized)) continue;
-
-                    IngredientManager.addItem(normalized);
-
-                    if (isResult) {
-                        List<ParsedRecipeView> list = RECIPES_CACHE.computeIfAbsent(normalized, k -> new ArrayList<>());
-                        if (!list.contains(parsed)) list.add(parsed);
-                    } else {
-                        List<ParsedRecipeView> list = USES_CACHE.computeIfAbsent(normalized, k -> new ArrayList<>());
-                        if (!list.contains(parsed)) list.add(parsed);
-                    }
-                }
-            });
         }
+    }
+
+    private static void processItems(Map<Integer, List<ItemStack>> slots, Set<Integer> results, Set<Integer> ignored, ParsedRecipeView parsed) {
+        slots.forEach((slot, items) -> {
+            boolean isIgnored = ignored.contains(slot);
+            boolean isResult = results.contains(slot);
+            for (ItemStack item : items) {
+                processSingleItem(item, isIgnored, isResult, parsed);
+            }
+        });
+    }
+
+    private static void processSectionItems(List<ItemStack> items, int reprSlot, Set<Integer> results, Set<Integer> ignored, ParsedRecipeView parsed) {
+        if (items == null) return;
+        boolean isIgnored = ignored.contains(reprSlot);
+        boolean isResult = results.contains(reprSlot);
+        for (ItemStack item : items) {
+            processSingleItem(item, isIgnored, isResult, parsed);
+        }
+    }
+
+    private static void processSingleItem(ItemStack item, boolean isIgnored, boolean isResult, ParsedRecipeView parsed) {
+        ItemStack normalized = IngredientManager.deduplicate(item.asOne());
+        if (isIgnored || IngredientManager.isHidden(normalized)) return;
+
+        IngredientManager.addItem(normalized);
+
+        List<ParsedRecipeView> list;
+        if (isResult) {
+            list = RECIPES_CACHE.computeIfAbsent(normalized, k -> new ArrayList<>());
+        } else {
+            list = USES_CACHE.computeIfAbsent(normalized, k -> new ArrayList<>());
+        }
+        if (!list.contains(parsed)) list.add(parsed);
     }
 }

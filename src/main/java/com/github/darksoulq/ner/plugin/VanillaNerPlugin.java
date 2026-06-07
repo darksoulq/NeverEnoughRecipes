@@ -18,12 +18,15 @@ import org.bukkit.inventory.*;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 
+@SuppressWarnings("UnstableApiUsage")
 public class VanillaNerPlugin implements NerPlugin {
 
     private static final Map<Material, Integer> CREATIVE_ORDER = new EnumMap<>(Material.class);
     private static boolean creativeOrderInitialized = false;
+
+    private static final Map<Material, String> VANILLA_TAGS = new EnumMap<>(Material.class);
+    private static boolean vanillaTagsLoaded = false;
 
     private static int getCreativeOrder(Material material) {
         if (!creativeOrderInitialized) {
@@ -50,8 +53,23 @@ public class VanillaNerPlugin implements NerPlugin {
         return CREATIVE_ORDER.getOrDefault(material, Integer.MAX_VALUE);
     }
 
+    private static void loadVanillaTags() {
+        if (vanillaTagsLoaded) return;
+        for (org.bukkit.Tag<Material> tag : Bukkit.getTags(org.bukkit.Tag.REGISTRY_ITEMS, Material.class)) {
+            String tagNamespace = tag.getKey().getNamespace().toLowerCase(Locale.ROOT);
+            String tagKey = tag.getKey().getKey().toLowerCase(Locale.ROOT);
+            String fullTag = tagNamespace + ":" + tagKey;
+            for (Material mat : tag.getValues()) {
+                VANILLA_TAGS.merge(mat, fullTag, (a, b) -> a + ";" + b);
+            }
+        }
+        vanillaTagsLoaded = true;
+    }
+
     @Override
     public void register(Registration registry) {
+        loadVanillaTags();
+
         registry.addDeduplicator(item -> {
             if (item.getType() == Material.SUSPICIOUS_STEW) {
                 return new ItemStack(Material.SUSPICIOUS_STEW);
@@ -83,6 +101,9 @@ public class VanillaNerPlugin implements NerPlugin {
         });
 
         registry.addFilter("#", (term, item) -> {
+            String vTags = VANILLA_TAGS.get(item.getType());
+            if (vTags != null && vTags.contains(term)) return true;
+
             for (Map.Entry<String, Tag<?, ?>> entry : Registries.TAGS.getAll().entrySet()) {
                 if (entry.getValue() instanceof ItemTag itemTag) {
                     if (entry.getKey().toLowerCase(Locale.ROOT).contains(term) && itemTag.contains(item)) {
