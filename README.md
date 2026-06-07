@@ -150,7 +150,7 @@ public class YourRecipeCategory extends RecipeCategory<YourRecipeClass> {
 ### Notes
 
 * **Texture**: Refer to AbyssalLib for loading fonts and `TextureGlyph`s.
-* **Offset**: Use `-8` if your texture matches the base texture size.
+* **Offset**: Use `-8` in most cases.
 * **Catalyst**: The provider item (e.g. Crafting Table) is passed to the parser automatically by the registry.
 * **Probabilities**: Use `.probability(itemStack, expression/float)` to append chance notations to the lore of displayed items.
 * **Paged Sections**: Pass a `PagedSection` to automatically chunk large lists of items into smaller navigable areas within the same view.
@@ -186,23 +186,19 @@ public class MyNerIntegration implements NerPlugin {
         registry.removeRecipe(recipeInstance);
         registry.removeRecipes(recipe -> recipe instanceof YourRecipeClass && shouldRemove((YourRecipeClass) recipe));
         
-        registry.addFilter("!", (query, item) -> {
-            return item.getType().name().contains(query);
-        });
+        registry.addFilter("!", (query, item) -> item.getType().name().contains(query));
 
         registry.addDeduplicator(item -> {
             if (item.getType() == Material.POTION) return new ItemStack(Material.POTION);
             return item;
         });
 
-        registry.addModifier(item -> {
+        registry.addModifier((player, item) -> {
             if (shouldObscure(item)) applyObfuscation(item);
             return item;
         });
 
-        registry.setNamespaceComparator("custom_namespace", (item1, item2) -> {
-            return item1.getType().name().compareTo(item2.getType().name());
-        });
+        registry.setNamespaceComparator("custom_namespace", (item1, item2) -> item1.getType().name().compareTo(item2.getType().name()));
     }
 }
 
