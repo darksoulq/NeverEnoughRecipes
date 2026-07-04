@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.github.darksoulq'
-version = '1.2.0-mc.26.1.2'
+version = '1.2.0-mc.26.2'
 
 def targetJavaVersion = 25
 
@@ -27,6 +27,11 @@ repositories {
     }
 
     maven {
+        name = 'sonatypeSnapshots'
+        url = uri('https://central.sonatype.com/repository/maven-snapshots/')
+    }
+
+    maven {
         name = 'jitpack'
         url = uri('https://jitpack.io')
     }
@@ -38,8 +43,8 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle('26.1.2.build.+')
-    compileOnly 'com.github.darksoulq:AbyssalLib:v2.4.0-mc.26.1.2-alpha.1'
+    paperweight.paperDevBundle('26.2.build.+')
+    compileOnly 'io.github.darksoulq:AbyssalLib:2.4.0-mc.26.2-alpha.2-SNAPSHOT'
     compileOnly 'dev.faststats.metrics:bukkit:0.22.0'
 }
 
@@ -51,12 +56,12 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('runServer') {
-    minecraftVersion('26.1.2')
+    minecraftVersion('26.2')
     jvmArgs '-Xms2G', '-Xmx2G', '-Dcom.mojang.eula.agree=true'
 }
 
 tasks.named('runFolia') {
-    minecraftVersion('26.1.2')
+    minecraftVersion('26.2')
     jvmArgs '-Xms2G', '-Xmx2G', '-Dcom.mojang.eula.agree=true'
 }
 

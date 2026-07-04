@@ -51,5 +51,15 @@
       <option name="name" value="faststatsReleases" />
       <option name="url" value="https://repo.faststats.dev/releases" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="sonatypeSnapshots" />
+      <option name="name" value="sonatypeSnapshots" />
+      <option name="url" value="https://oss.sonatype.org/content/repositories/snapshots/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="sonatypeSnapshots" />
+      <option name="name" value="sonatypeSnapshots" />
+      <option name="url" value="https://central.sonatype.com/repository/maven-snapshots/" />
+    </remote-repository>
   </component>
 </project>
