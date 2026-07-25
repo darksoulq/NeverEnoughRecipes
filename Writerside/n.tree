@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="n"
+                 name="NeverEnoughRecipes"
+                  start-page="installation.md">
+
+    <toc-element topic="installation.md"/>
+    <toc-element topic="configuration.md"/>
+    <toc-element topic="commands_and_perms.md"/>
+    <toc-element topic="integrations.md"/>
+    <toc-element topic="recipe-categories.md"/>
+</instance-profile>

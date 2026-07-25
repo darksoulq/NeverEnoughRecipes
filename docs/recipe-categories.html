@@ -1,0 +1,94 @@
+<!DOCTYPE html SYSTEM "about:legacy-compat">
+<html lang="en-US" data-preset="contrast" data-primary-color="#307FFF"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta charset="UTF-8"><meta name="built-on" content="2026-07-25T13:30:11.5406717"><title>Custom Recipe Categories | NeverEnoughRecipes</title><script type="application/json" id="virtual-toc-data">[{"id":"1-creating-a-category","level":0,"title":"1. Creating a Category","anchor":"#1-creating-a-category"},{"id":"2-the-builder-methods","level":0,"title":"2. The Builder Methods","anchor":"#2-the-builder-methods"},{"id":"3-registering-your-category","level":0,"title":"3. Registering Your Category","anchor":"#3-registering-your-category"}]</script><script type="application/json" id="topic-shortcuts"></script><link href="https://resources.jetbrains.com/writerside/apidoc/6.26.0-b913/app.css" rel="stylesheet"><meta name="msapplication-TileColor" content="#000000"><link rel="apple-touch-icon" sizes="180x180" href="https://jetbrains.com/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="https://jetbrains.com/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="https://jetbrains.com/favicon-16x16.png"><meta name="msapplication-TileImage" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-144x144.png"><meta name="msapplication-square70x70logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-70x70.png"><meta name="msapplication-square150x150logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-150x150.png"><meta name="msapplication-wide310x150logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-310x150.png"><meta name="msapplication-square310x310logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-310x310.png"><meta name="image" content=""><!-- Open Graph --><meta property="og:title" content="Custom Recipe Categories | NeverEnoughRecipes"><meta property="og:description" content=""><meta property="og:image" content=""><meta property="og:site_name" content="NeverEnoughRecipes Help"><meta property="og:type" content="website"><meta property="og:locale" content="en_US"><meta property="og:url" content="writerside-documentation/recipe-categories.html"><!-- End Open Graph --><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content=""><meta name="twitter:title" content="Custom Recipe Categories | NeverEnoughRecipes"><meta name="twitter:description" content=""><meta name="twitter:creator" content=""><meta name="twitter:image:src" content=""><!-- End Twitter Card --><!-- Schema.org WebPage --><script type="application/ld+json">{
+    "@context": "http://schema.org",
+    "@type": "WebPage",
+    "@id": "writerside-documentation/recipe-categories.html#webpage",
+    "url": "writerside-documentation/recipe-categories.html",
+    "name": "Custom Recipe Categories | NeverEnoughRecipes",
+    "description": "",
+    "image": "",
+    "inLanguage":"en-US"
+}</script><!-- End Schema.org --><!-- Schema.org WebSite --><script type="application/ld+json">{
+    "@type": "WebSite",
+    "@id": "writerside-documentation/#website",
+    "url": "writerside-documentation/",
+    "name": "NeverEnoughRecipes Help"
+}</script><!-- End Schema.org --></head><body data-id="recipe-categories" data-main-title="Custom Recipe Categories" data-article-props="{&quot;seeAlsoStyle&quot;:&quot;links&quot;}" data-template="article" data-breadcrumbs=""><div class="wrapper"><main class="panel _main"><header class="panel__header"><div class="container"><h3>NeverEnoughRecipes  Help</h3><div class="panel-trigger"></div></div></header><section class="panel__content"><div class="container"><article class="article" data-shortcut-switcher="inactive"><h1 data-toc="recipe-categories" id="recipe-categories.md">Custom Recipe Categories</h1><p id="j4o9zk_4">The layout system in NER is built around the <code class="code" id="j4o9zk_9">RecipeCategory&lt;T&gt;</code> class. It translates raw recipe data into a structured format that the GUI can render.</p><p id="j4o9zk_5">By defining a category, you can map inputs and outputs to specific inventory slots, display custom textures from AbyssalLib, append probability tooltips, and create multi-stage or paginated recipe sequences.</p><section class="chapter"><h2 id="1-creating-a-category" data-toc="1-creating-a-category">1. Creating a Category</h2><p id="j4o9zk_10">To define a custom layout, create a class that extends <code class="code" id="j4o9zk_13">RecipeCategory&lt;T&gt;</code> where <code class="code" id="j4o9zk_14">T</code> is your custom recipe class. You must implement four abstract methods.</p><div class="code-block" data-lang="java">
+import com.github.darksoulq.abyssallib.server.resource.asset.Font;
+import com.github.darksoulq.ner.layout.RecipeCategory;
+import com.github.darksoulq.ner.model.ParsedRecipeView;
+import com.github.darksoulq.ner.model.RecipeStage;
+import com.github.darksoulq.ner.model.PagedSection;
+import com.github.darksoulq.ner.model.SectionButton;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.Set;
+import java.util.List;
+
+public class MyCustomCategory extends RecipeCategory&lt;MyRecipeClass&gt; {
+
+    @Override
+    public Class&lt;MyRecipeClass&gt; getRecipeClass() {
+        return MyRecipeClass.class;
+    }
+
+    @Override
+    public ParsedRecipeView parseRecipe(MyRecipeClass recipe, ItemStack catalyst) {
+        // Assume 'MyTextures.CUSTOM_BG' is a Font.TextureGlyph you registered
+        ParsedRecipeView.Builder builder = ParsedRecipeView.builder(MyTextures.CUSTOM_BG, -8, catalyst);
+        
+        // Setting a static item
+        builder.set(20, recipe.getInput());
+        
+        // Setting an animated list of items or Bukkit RecipeChoice
+        builder.setChoice(21, recipe.getBukkitChoice());
+        builder.set(24, recipe.getResult());
+        
+        // Adding probability lore to an item
+        builder.probability(recipe.getResult(), &quot;50%&quot;);
+        
+        // Adding a paginated section for multiple outputs
+        builder.addSection(new PagedSection(
+            new int[]{10, 11, 12}, 
+            recipe.getPossibleExtraOutputs(), 
+            new SectionButton(9, null), // Pass an ItemStack, or null for default arrow
+            new SectionButton(13, null)     
+        ));
+
+        return builder.build();
+    }
+
+    @Override
+    public Set&lt;Integer&gt; getResultSlots() {
+        // Used by CraftabilityCheckers to ignore these slots when checking (and manager to detect whether its a USE of the item or its RECIPE)
+        return Set.of(24, 10, 11, 12);
+    }
+
+    @Override
+    public Set&lt;Integer&gt; getIgnoredSlots() {
+        // Used for decorative items like XP icons that aren't inputs or outputs
+        return Set.of();
+    }
+}
+</div><aside class="prompt" data-type="note" data-title="" id="j4o9zk_12"><p>By default, <code class="code" id="j4o9zk_15">isCraftableCategory()</code> returns true. If your category represents something that cannot be crafted by players (like a natural world generation table), you can override it to return false so it doesn't show up in the &quot;Craftable&quot; main menu filter.</p></aside></section><section class="chapter"><h2 id="2-the-builder-methods" data-toc="2-the-builder-methods">2. The Builder Methods</h2><p id="j4o9zk_16">The <code class="code" id="j4o9zk_21">ParsedRecipeView.Builder</code> (and its internal <code class="code" id="j4o9zk_22">RecipeStage.Builder</code>) provide several ways to parse your items securely.</p><section class="chapter"><h3 id="basic-slots-and-choices" data-toc="basic-slots-and-choices">Basic Slots and Choices</h3><ul class="list _bullet" id="j4o9zk_23"><li class="list__item" id="j4o9zk_25"><p id="j4o9zk_28"><code class="code" id="j4o9zk_29">set(int slot, ItemStack item)</code> &mdash; Sets a single item.</p></li><li class="list__item" id="j4o9zk_26"><p id="j4o9zk_30"><code class="code" id="j4o9zk_31">set(int slot, List&lt;ItemStack&gt; items)</code> &mdash; Sets multiple items in one slot. The GUI will automatically animate and cycle through them.</p></li><li class="list__item" id="j4o9zk_27"><p id="j4o9zk_32"><code class="code" id="j4o9zk_33">setChoice(int slot, RecipeChoice choice)</code> &mdash; Automatically unpacks a Bukkit <code class="code" id="j4o9zk_34">RecipeChoice.MaterialChoice</code> or <code class="code" id="j4o9zk_35">RecipeChoice.ExactChoice</code> into an animated list.</p></li></ul><aside class="prompt" data-type="tip" data-title="" id="j4o9zk_24"><p>The <code class="code" id="j4o9zk_36">RecipeCategory</code> class also provides a protected <code class="code" id="j4o9zk_37">applyChoice(Map&lt;Integer, List&lt;ItemStack&gt;&gt; map, int slot, RecipeChoice choice)</code> helper method if you ever need to manually resolve a Bukkit choice into a map before building.</p></aside></section><section class="chapter"><h3 id="probabilities" data-toc="probabilities">Probabilities</h3><p id="j4o9zk_38">Use <code class="code" id="j4o9zk_40">.probability()</code> to automatically append a formatted <code class="code" id="j4o9zk_41">Chance: X%</code> string to the bottom of the item's lore when viewed in the GUI.</p><ul class="list _bullet" id="j4o9zk_39"><li class="list__item" id="j4o9zk_42"><p id="j4o9zk_46"><code class="code" id="j4o9zk_47">.probability(ItemStack item, float chance)</code></p></li><li class="list__item" id="j4o9zk_43"><p id="j4o9zk_48"><code class="code" id="j4o9zk_49">.probability(ItemStack item, String expression)</code></p></li><li class="list__item" id="j4o9zk_44"><p id="j4o9zk_50"><code class="code" id="j4o9zk_51">.probability(List&lt;ItemStack&gt; items, float chance)</code></p></li><li class="list__item" id="j4o9zk_45"><p id="j4o9zk_52"><code class="code" id="j4o9zk_53">.probability(List&lt;ItemStack&gt; items, String expression)</code></p></li></ul></section><section class="chapter"><h3 id="paged-sections" data-toc="paged-sections">Paged Sections</h3><p id="j4o9zk_54">If your recipe produces or accepts a large list of items, use <code class="code" id="j4o9zk_57">PagedSection</code>. It takes:</p><ol class="list _decimal" id="j4o9zk_55" type="1"><li class="list__item" id="j4o9zk_58"><p id="j4o9zk_61"><code class="code" id="j4o9zk_62">int[] slots</code>: The GUI slots to populate.</p></li><li class="list__item" id="j4o9zk_59"><p id="j4o9zk_63"><code class="code" id="j4o9zk_64">List&lt;ItemStack&gt; items</code>: The massive list of items to display.</p></li><li class="list__item" id="j4o9zk_60"><p id="j4o9zk_65"><code class="code" id="j4o9zk_66">SectionButton prevButton</code>/<code class="code" id="j4o9zk_67">SectionButton nextButton</code>: Defined using <code class="code" id="j4o9zk_68">new SectionButton(slot, ItemStack)</code>.</p></li></ol><p id="j4o9zk_56">NER will automatically paginate the list across your defined slots and make the buttons functional.</p></section><section class="chapter"><h3 id="multi-stage-recipes" data-toc="multi-stage-recipes">Multi-Stage Recipes</h3><p id="j4o9zk_69">If your recipe is a complex, multi-step process, you can append additional sequential stages using <code class="code" id="j4o9zk_72">RecipeStage</code>. The <code class="code" id="j4o9zk_73">ParsedRecipeView.Builder</code> acts as the primary stage, but you can append more via <code class="code" id="j4o9zk_74">.addStage()</code>.</p><div class="code-block" data-lang="java">
+RecipeStage extraStage = RecipeStage.builder(MyTextures.STAGE_TWO_BG, -8)
+    .set(20, recipe.getStageTwoInput())
+    .set(24, recipe.getStageTwoResult())
+    .build();
+
+builder.addStage(extraStage);
+</div><p id="j4o9zk_71">Players will see a &quot;Stage 1&quot; and &quot;Stage 2&quot; indicator at the top of the Recipe Viewer, allowing them to flip chronologically through the process.</p></section></section><section class="chapter"><h2 id="3-registering-your-category" data-toc="3-registering-your-category">3. Registering Your Category</h2><p id="j4o9zk_75">Once your layout is complete, register it in your <code class="code" id="j4o9zk_77">NerPlugin</code> integration class alongside the &quot;Catalyst&quot; (the block or item that processes the recipe).</p><div class="code-block" data-lang="java">
+import com.github.darksoulq.ner.plugin.NerPlugin;
+import com.github.darksoulq.ner.plugin.Registration;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+
+public class MyCategoryIntegration implements NerPlugin {
+
+    @Override
+    public void register(Registration registry) {
+        registry.addCategory(new MyCustomCategory());
+        registry.addCatalyst(MyRecipeClass.class, new ItemStack(Material.SMITHING_TABLE));
+    }
+}
+</div></section><div class="last-modified">25 July 2026</div><div data-feedback-placeholder="true"></div><div class="navigation-links _bottom"><a href="integrations.html" class="navigation-links__prev">Registry and Integrations</a></div></article><div id="disqus_thread"></div></div></section></main></div><script src="https://resources.jetbrains.com/writerside/apidoc/6.26.0-b913/app.js"></script></body></html>

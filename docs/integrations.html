@@ -1,0 +1,81 @@
+<!DOCTYPE html SYSTEM "about:legacy-compat">
+<html lang="en-US" data-preset="contrast" data-primary-color="#307FFF"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta charset="UTF-8"><meta name="built-on" content="2026-07-25T13:30:11.5712887"><title>Registry and Integrations | NeverEnoughRecipes</title><script type="application/json" id="virtual-toc-data">[{"id":"1-creating-your-integration-class","level":0,"title":"1. Creating Your Integration Class","anchor":"#1-creating-your-integration-class"},{"id":"2-understanding-the-registry-methods","level":0,"title":"2. Understanding the Registry Methods","anchor":"#2-understanding-the-registry-methods"},{"id":"3-hooking-into-ner","level":0,"title":"3. Hooking into NER","anchor":"#3-hooking-into-ner"}]</script><script type="application/json" id="topic-shortcuts"></script><link href="https://resources.jetbrains.com/writerside/apidoc/6.26.0-b913/app.css" rel="stylesheet"><meta name="msapplication-TileColor" content="#000000"><link rel="apple-touch-icon" sizes="180x180" href="https://jetbrains.com/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="https://jetbrains.com/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="https://jetbrains.com/favicon-16x16.png"><meta name="msapplication-TileImage" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-144x144.png"><meta name="msapplication-square70x70logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-70x70.png"><meta name="msapplication-square150x150logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-150x150.png"><meta name="msapplication-wide310x150logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-310x150.png"><meta name="msapplication-square310x310logo" content="https://resources.jetbrains.com/storage/ui/favicons/mstile-310x310.png"><meta name="image" content=""><!-- Open Graph --><meta property="og:title" content="Registry and Integrations | NeverEnoughRecipes"><meta property="og:description" content=""><meta property="og:image" content=""><meta property="og:site_name" content="NeverEnoughRecipes Help"><meta property="og:type" content="website"><meta property="og:locale" content="en_US"><meta property="og:url" content="writerside-documentation/integrations.html"><!-- End Open Graph --><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content=""><meta name="twitter:title" content="Registry and Integrations | NeverEnoughRecipes"><meta name="twitter:description" content=""><meta name="twitter:creator" content=""><meta name="twitter:image:src" content=""><!-- End Twitter Card --><!-- Schema.org WebPage --><script type="application/ld+json">{
+    "@context": "http://schema.org",
+    "@type": "WebPage",
+    "@id": "writerside-documentation/integrations.html#webpage",
+    "url": "writerside-documentation/integrations.html",
+    "name": "Registry and Integrations | NeverEnoughRecipes",
+    "description": "",
+    "image": "",
+    "inLanguage":"en-US"
+}</script><!-- End Schema.org --><!-- Schema.org WebSite --><script type="application/ld+json">{
+    "@type": "WebSite",
+    "@id": "writerside-documentation/#website",
+    "url": "writerside-documentation/",
+    "name": "NeverEnoughRecipes Help"
+}</script><!-- End Schema.org --></head><body data-id="integrations" data-main-title="Registry and Integrations" data-article-props="{&quot;seeAlsoStyle&quot;:&quot;links&quot;}" data-template="article" data-breadcrumbs=""><div class="wrapper"><main class="panel _main"><header class="panel__header"><div class="container"><h3>NeverEnoughRecipes  Help</h3><div class="panel-trigger"></div></div></header><section class="panel__content"><div class="container"><article class="article" data-shortcut-switcher="inactive"><h1 data-toc="integrations" id="integrations.md">Registry and Integrations</h1><p id="z4xxz4w_4">NER uses a lifecycle-based registration system. Instead of registering objects sporadically across your plugin, you define an integration class that implements <code class="code" id="z4xxz4w_8">NerPlugin</code>. When NER compiles its registries, it will call your integration and pass a <code class="code" id="z4xxz4w_9">Registration</code> instance.</p><section class="chapter"><h2 id="1-creating-your-integration-class" data-toc="1-creating-your-integration-class">1. Creating Your Integration Class</h2><p id="z4xxz4w_10">Create a new class and implement <code class="code" id="z4xxz4w_12">NerPlugin</code>. The <code class="code" id="z4xxz4w_13">register</code> method exposes the API to inject custom content into the recipe browser.</p><div class="code-block" data-lang="java">
+import com.github.darksoulq.ner.plugin.NerPlugin;
+import com.github.darksoulq.ner.plugin.Registration;
+import com.github.darksoulq.ner.util.CraftabilityUtil;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.List;
+
+public class MyNerIntegration implements NerPlugin {
+
+    @Override
+    public void register(Registration registry) {
+        
+        // Registering custom items to appear in the Main Menu
+        registry.addItem(new ItemStack(Material.ECHO_SHARD)); 
+        registry.addItem(&quot;my_custom_addon&quot;, customItemStack); 
+
+        // Grouping items visually in the Main Menu
+        registry.addItemGroup(&quot;custom_swords&quot;, Component.text(&quot;Custom Swords&quot;), listOfSwords, true);
+
+        // Registering or removing specific recipes
+        registry.addRecipe(myCustomRecipeInstance);
+        registry.removeRecipes(recipe -&gt; recipe instanceof MyRecipeClass &amp;&amp; shouldRemove((MyRecipeClass) recipe));
+        
+        // Register custom search prefixes
+        registry.addFilter(&quot;!&quot;, (query, item) -&gt; item.getType().name().toLowerCase().contains(query));
+
+        // Deduplicators merge item variations into a single display item
+        registry.addDeduplicator(item -&gt; {
+            if (item.getType() == Material.SUSPICIOUS_STEW) return new ItemStack(Material.SUSPICIOUS_STEW);
+            return item;
+        });
+
+        // Modifiers change how an item looks specifically for the player viewing it
+        registry.addModifier((player, item) -&gt; {
+            if (shouldObscure(item)) applyObfuscation(item);
+            return item;
+        });
+
+        // Registering logic to check if a player has the ingredients for a recipe
+        registry.addCraftabilityChecker(MyRecipeClass.class, (player, recipe) -&gt; 
+            CraftabilityUtil.hasIngredients(player, recipe.getChoices())
+        );
+
+        // Custom sorting logic for your specific namespace
+        registry.setNamespaceComparator(&quot;my_custom_addon&quot;, (item1, item2) -&gt; 
+            item1.fold(i -&gt; i.getType().name(), g -&gt; g.id())
+                 .compareTo(item2.fold(i -&gt; i.getType().name(), g -&gt; g.id()))
+        );
+    }
+}
+</div></section><section class="chapter"><h2 id="2-understanding-the-registry-methods" data-toc="2-understanding-the-registry-methods">2. Understanding the Registry Methods</h2><p id="z4xxz4w_14">Here is a breakdown of the core registry mechanics available to you:</p><section class="chapter"><h3 id="search-filters-addfilter" data-toc="search-filters-addfilter">Search Filters (<code class="code" id="z4xxz4w_23">addFilter</code>)</h3><p id="z4xxz4w_21">Adds custom search prefixes for the Anvil search menu. NER includes the following default filters:</p><ul class="list _bullet" id="z4xxz4w_22"><li class="list__item" id="z4xxz4w_24"><p id="z4xxz4w_28"><code class="code" id="z4xxz4w_29">@</code> &mdash; Searches by <span class="control" id="z4xxz4w_30">Namespace</span> (e.g., <code class="code" id="z4xxz4w_31">@minecraft</code>).</p></li><li class="list__item" id="z4xxz4w_25"><p id="z4xxz4w_32"><code class="code" id="z4xxz4w_33">:</code> &mdash; Searches inside the item's <span class="control" id="z4xxz4w_34">Lore</span>.</p></li><li class="list__item" id="z4xxz4w_26"><p id="z4xxz4w_35"><code class="code" id="z4xxz4w_36">#</code> &mdash; Searches by the item's <span class="control" id="z4xxz4w_37">Tags</span> (e.g., <code class="code" id="z4xxz4w_38">#logs</code>).</p></li><li class="list__item" id="z4xxz4w_27"><p id="z4xxz4w_39"><code class="code" id="z4xxz4w_40">$</code> &mdash; Searches by the <span class="control" id="z4xxz4w_41">Crafting Station</span> or provider (e.g., <code class="code" id="z4xxz4w_42">$furnace</code> finds items smelted or used in a furnace).</p></li></ul></section><section class="chapter"><h3 id="item-groups-additemgroup" data-toc="item-groups-additemgroup">Item Groups (<code class="code" id="z4xxz4w_45">addItemGroup</code>)</h3><p id="z4xxz4w_44">Groups a <code class="code" id="z4xxz4w_46">List&lt;ItemStack&gt;</code> under a single collapsible header in the main menu. Setting <code class="code" id="z4xxz4w_47">animate</code> to <code class="code" id="z4xxz4w_48">true</code> will cycle through the items in the group icon dynamically.</p></section><section class="chapter"><h3 id="craftability-checkers-addcraftabilitychecker" data-toc="craftability-checkers-addcraftabilitychecker">Craftability Checkers (<code class="code" id="z4xxz4w_51">addCraftabilityChecker</code>)</h3><p id="z4xxz4w_50">When a player filters the main menu by &quot;Craftable&quot;, NER needs to know how to verify if a player has the right items. You bind your custom recipe class to a checker logic here. <code class="code" id="z4xxz4w_52">CraftabilityUtil.hasIngredients()</code> safely simulates taking items from a cached player inventory.</p></section><section class="chapter"><h3 id="deduplicators-adddeduplicator" data-toc="deduplicators-adddeduplicator">Deduplicators (<code class="code" id="z4xxz4w_55">addDeduplicator</code>)</h3><p id="z4xxz4w_54">Useful when you have hundreds of NBT variations of the same item that share the exact same recipe (like potions or suspicious stews). It forces the indexer to treat them as a single generic item in the GUI to prevent clutter.</p></section><section class="chapter"><h3 id="modifiers-addmodifier" data-toc="modifiers-addmodifier">Modifiers (<code class="code" id="z4xxz4w_58">addModifier</code>)</h3><p id="z4xxz4w_57">Useful if items should display differently depending on the player's permissions or progression. The modifier applies <span class="emphasis" id="z4xxz4w_59">only</span> visually when rendering the GUI button.</p></section></section><section class="chapter"><h2 id="3-hooking-into-ner" data-toc="3-hooking-into-ner">3. Hooking into NER</h2><p id="z4xxz4w_60">To finalize the setup, register your integration class during your plugin's <code class="code" id="z4xxz4w_63">onEnable()</code> phase. Because you set <code class="code" id="z4xxz4w_64">load: BEFORE</code> for NER in your <code class="code" id="z4xxz4w_65">paper-plugin.yml</code>, NER is guaranteed to be ready.</p><div class="code-block" data-lang="java">
+import com.github.darksoulq.ner.NeverEnoughRecipes;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public class MyPlugin extends JavaPlugin {
+
+    @Override
+    public void onEnable() {
+        // Hook into NER
+        NeverEnoughRecipes.registerPlugin(new MyNerIntegration());
+    }
+}
+</div><aside class="prompt" data-type="tip" data-title="" id="z4xxz4w_62"><p>If a server admin uses <code class="code" id="z4xxz4w_66">/ner reload</code>, NER clears all caches and re-triggers your <code class="code" id="z4xxz4w_67">register()</code> method automatically. You do not need to manually listen for reloads.</p></aside></section><div class="last-modified">25 July 2026</div><div data-feedback-placeholder="true"></div><div class="navigation-links _bottom"><a href="commands-and-perms.html" class="navigation-links__prev">Commands and Permissions</a><a href="recipe-categories.html" class="navigation-links__next">Custom Recipe Categories</a></div></article><div id="disqus_thread"></div></div></section></main></div><script src="https://resources.jetbrains.com/writerside/apidoc/6.26.0-b913/app.js"></script></body></html>

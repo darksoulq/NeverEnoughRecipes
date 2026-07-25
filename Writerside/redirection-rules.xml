@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rules SYSTEM "https://resources.jetbrains.com/writerside/1.0/redirection-rules.dtd">
+<rules>
+    <!-- format is as follows
+    <rule id="<unique id>">
+        <accepts>page.html</accepts>
+    </rule>
+    -->
+    <rule id="978c7a9">
+        <description>Created after removal of "About NeverEnoughRecipes" from NeverEnoughRecipes</description>
+        <accepts>starter-topic.html</accepts>
+    </rule>
+    <rule id="6b1a522e">
+        <description>Created after removal of "Interface and Navigation" from NeverEnoughRecipes</description>
+        <accepts>interface.html</accepts>
+    </rule>
+</rules>

@@ -1,8 +1,0 @@
-abyssalLib:
-  type: compileOnly
-  group: io.github.darksoulq
-  name: AbyssalLib
-  version: 2.4.0-mc.{version}-alpha.2
-faststats:
-  type: compileOnly
-  module: dev.faststats.metrics:bukkit:0.22.0
