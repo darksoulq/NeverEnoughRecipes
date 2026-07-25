@@ -4,8 +4,11 @@ import com.github.darksoulq.ner.layout.RecipeCategory;
 import com.github.darksoulq.ner.model.PagedSection;
 import com.github.darksoulq.ner.model.ParsedRecipeView;
 import com.github.darksoulq.ner.model.RecipeStage;
+import com.github.darksoulq.ner.util.CraftabilityUtil;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.RecipeChoice;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +19,10 @@ public class RecipeManager {
     private static final Map<Class<?>, ItemStack> CATALYSTS = new ConcurrentHashMap<>();
     private static final List<Object> RAW_RECIPES = new ArrayList<>();
 
+    private static final Map<Class<?>, CraftabilityChecker<?>> CRAFTABILITY_CHECKERS = new ConcurrentHashMap<>();
+    private static final Map<ParsedRecipeView, Object> VIEW_TO_RECIPE = new ConcurrentHashMap<>();
+    private static final Map<Object, RecipeCategory<?>> RECIPE_TO_CATEGORY = new ConcurrentHashMap<>();
+
     private static final Map<ItemStack, List<ParsedRecipeView>> RECIPES_CACHE = new ConcurrentHashMap<>();
     private static final Map<ItemStack, List<ParsedRecipeView>> USES_CACHE = new ConcurrentHashMap<>();
 
@@ -23,12 +30,19 @@ public class RecipeManager {
         CATEGORIES.clear();
         CATALYSTS.clear();
         RAW_RECIPES.clear();
+        CRAFTABILITY_CHECKERS.clear();
+        VIEW_TO_RECIPE.clear();
+        RECIPE_TO_CATEGORY.clear();
         RECIPES_CACHE.clear();
         USES_CACHE.clear();
     }
 
     public static void addCategory(RecipeCategory<?> category) {
         CATEGORIES.put(category.getRecipeClass(), category);
+    }
+
+    public static Map<Class<?>, RecipeCategory<?>> getCategories() {
+        return CATEGORIES;
     }
 
     public static void addCatalyst(Class<?> recipeClass, ItemStack catalyst) {
@@ -47,6 +61,10 @@ public class RecipeManager {
         RAW_RECIPES.removeIf(predicate);
     }
 
+    public static <T> void addCraftabilityChecker(Class<T> recipeClass, CraftabilityChecker<T> checker) {
+        CRAFTABILITY_CHECKERS.put(recipeClass, checker);
+    }
+
     public static List<ParsedRecipeView> getRecipes(ItemStack item) {
         return RECIPES_CACHE.getOrDefault(IngredientManager.deduplicate(item.asOne()), Collections.emptyList());
     }
@@ -56,9 +74,73 @@ public class RecipeManager {
     }
 
     @SuppressWarnings("unchecked")
+    public static boolean isCraftable(Player player, ItemStack item) {
+        List<ParsedRecipeView> recipes = getRecipes(item);
+        if (recipes.isEmpty()) return false;
+
+        for (ParsedRecipeView view : recipes) {
+            Object raw = VIEW_TO_RECIPE.get(view);
+            if (raw != null) {
+                RecipeCategory<?> cat = RECIPE_TO_CATEGORY.get(raw);
+                if (cat != null && !cat.isCraftableCategory()) {
+                    continue;
+                }
+
+                CraftabilityChecker<Object> checker = null;
+                for (Map.Entry<Class<?>, CraftabilityChecker<?>> entry : CRAFTABILITY_CHECKERS.entrySet()) {
+                    if (entry.getKey().isAssignableFrom(raw.getClass())) {
+                        checker = (CraftabilityChecker<Object>) entry.getValue();
+                        break;
+                    }
+                }
+
+                if (checker != null) {
+                    if (checker.canCraft(player, raw)) return true;
+                } else if (cat != null) {
+                    if (defaultCraftCheck(player, view, cat)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean defaultCraftCheck(Player player, ParsedRecipeView view, RecipeCategory<?> category) {
+        Set<Integer> results = category.getResultSlots();
+        Set<Integer> ignored = category.getIgnoredSlots();
+        List<RecipeChoice> choices = new ArrayList<>();
+
+        for (RecipeStage stage : view.stages()) {
+            for (Map.Entry<Integer, List<ItemStack>> entry : stage.slots().entrySet()) {
+                if (!results.contains(entry.getKey()) && !ignored.contains(entry.getKey())) {
+                    List<ItemStack> valid = entry.getValue();
+                    if (valid != null && !valid.isEmpty()) {
+                        choices.add(new RecipeChoice.ExactChoice(valid));
+                    }
+                }
+            }
+
+            for (PagedSection section : stage.pagedSections()) {
+                if (section.slots() != null && section.slots().length > 0) {
+                    int firstSlot = section.slots()[0];
+                    if (!results.contains(firstSlot) && !ignored.contains(firstSlot)) {
+                        List<ItemStack> valid = section.items();
+                        if (valid != null && !valid.isEmpty()) {
+                            choices.add(new RecipeChoice.ExactChoice(valid));
+                        }
+                    }
+                }
+            }
+        }
+
+        return CraftabilityUtil.hasIngredients(player, choices);
+    }
+
+    @SuppressWarnings("unchecked")
     public static void compile() {
         RECIPES_CACHE.clear();
         USES_CACHE.clear();
+        VIEW_TO_RECIPE.clear();
+        RECIPE_TO_CATEGORY.clear();
 
         for (Object recipe : RAW_RECIPES) {
             RecipeCategory<?> rawCat = null;
@@ -75,6 +157,9 @@ public class RecipeManager {
 
             ParsedRecipeView parsed = category.parseRecipe(recipe, catalyst);
             if (parsed == null) continue;
+
+            VIEW_TO_RECIPE.put(parsed, recipe);
+            RECIPE_TO_CATEGORY.put(recipe, rawCat);
 
             Set<Integer> results = category.getResultSlots();
             Set<Integer> ignored = category.getIgnoredSlots();

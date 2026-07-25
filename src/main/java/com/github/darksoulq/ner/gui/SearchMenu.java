@@ -5,11 +5,13 @@ import com.github.darksoulq.abyssallib.server.resource.util.TextOffset;
 import com.github.darksoulq.abyssallib.world.gui.Gui;
 import com.github.darksoulq.abyssallib.world.gui.GuiFlag;
 import com.github.darksoulq.abyssallib.world.gui.GuiManager;
+import com.github.darksoulq.abyssallib.world.gui.GuiView;
+import com.github.darksoulq.abyssallib.world.gui.GuiView.Segment;
 import com.github.darksoulq.abyssallib.world.gui.SlotPosition;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiButton;
 import com.github.darksoulq.abyssallib.world.gui.element.GuiItem;
-import com.github.darksoulq.abyssallib.world.gui.layer.PagedLayer;
 import com.github.darksoulq.abyssallib.world.item.Items;
+import com.github.darksoulq.ner.gui.layer.DynamicPagedLayer;
 import com.github.darksoulq.ner.model.ControlAction;
 import com.github.darksoulq.ner.registry.IngredientManager;
 import com.github.darksoulq.ner.registry.RecipeManager;
@@ -22,14 +24,13 @@ import io.papermc.paper.datacomponent.item.TooltipDisplay;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MenuType;
 import org.bukkit.inventory.view.AnvilView;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
 public class SearchMenu {
@@ -39,12 +40,18 @@ public class SearchMenu {
         27, 28, 29, 30, 31, 32, 33, 34, 35
     };
 
+    private static void updateArrows(GuiView view, DynamicPagedLayer<?> page) {
+        Inventory bottom = view.getBottom();
+        bottom.setItem(0, page.getPage() > 0 ? UiItems.PREV.getStack() : null);
+        bottom.setItem(8, page.getPage() < page.getPageCount() - 1 ? UiItems.NEXT.getStack() : null);
+    }
+
     public static Gui create(Player player) {
         List<ItemStack> allItems = IngredientManager.getItems();
         final String[] activeInput = { "" };
 
-        PagedLayer<ItemStack> page = PagedLayer.of(allItems, SLOTS, com.github.darksoulq.abyssallib.world.gui.GuiView.Segment.BOTTOM,
-            (item, _) -> {
+        DynamicPagedLayer<ItemStack> page = new DynamicPagedLayer<>(allItems, SLOTS, Segment.BOTTOM,
+            (item, ignored) -> {
                 ItemStack display = IngredientManager.applyModifiers(player, item.clone());
                 return new GuiButton(display, ctx -> {
                     PlayerSettings settings = UserManager.get(player.getUniqueId());
@@ -52,9 +59,11 @@ public class SearchMenu {
                     if (action == null) return;
 
                     if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
+                        GuiHistory.push(player, () -> GuiManager.open(player, create(player)));
                         InventoryBackupManager.transition(ctx.view());
                         GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.RECIPE));
                     } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
+                        GuiHistory.push(player, () -> GuiManager.open(player, create(player)));
                         InventoryBackupManager.transition(ctx.view());
                         GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.USE));
                     }
@@ -68,26 +77,48 @@ public class SearchMenu {
 
         return Gui.builder(MenuType.ANVIL, TextUtil.parse("<white><offset><texture></white><width>Search",
                 Placeholder.parsed("texture", Pack.SEARCH_MENU.toMiniMessageString()),
-                Placeholder.parsed("offset", com.github.darksoulq.abyssallib.server.resource.util.TextOffset.getOffsetMinimessage(-60)),
-                Placeholder.parsed("width", com.github.darksoulq.abyssallib.server.resource.util.TextOffset.getOffsetMinimessage(-170))))
+                Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(-60)),
+                Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-170))))
             .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
             .addLayer(page)
-            .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.getStack(), ctx -> { page.previous(ctx.view()); page.renderTo(ctx.view()); }))
-            .set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.getStack(), ctx -> { page.next(ctx.view()); page.renderTo(ctx.view()); }))
+            .set(SlotPosition.bottom(0), new GuiButton(UiItems.PREV.getStack(), ctx -> {
+                if (page.getPage() > 0) {
+                    page.previous(ctx.view());
+                    updateArrows(ctx.view(), page);
+                }
+            }) {
+                @Override
+                public ItemStack render(GuiView view, int slot) {
+                    return page.getPage() > 0 ? super.render(view, slot) : null;
+                }
+            })
+            .set(SlotPosition.bottom(8), new GuiButton(UiItems.NEXT.getStack(), ctx -> {
+                if (page.getPage() < page.getPageCount() - 1) {
+                    page.next(ctx.view());
+                    updateArrows(ctx.view(), page);
+                }
+            }) {
+                @Override
+                public ItemStack render(GuiView view, int slot) {
+                    return page.getPage() < page.getPageCount() - 1 ? super.render(view, slot) : null;
+                }
+            })
             .set(SlotPosition.top(0), new GuiItem(invisibleFiller))
             .onTick(view -> {
                 if (!(view.getInventoryView() instanceof AnvilView anvilView)) return;
                 String nextInput = Optional.ofNullable(anvilView.getRenameText()).orElse("");
-                if (activeInput[0].equals(nextInput)) return;
 
-                activeInput[0] = nextInput;
-                Set<ItemStack> searchResults = new HashSet<>(IngredientManager.search(nextInput));
-                page.setFilter(searchResults::contains);
-                page.renderTo(view);
+                if (!activeInput[0].equals(nextInput)) {
+                    activeInput[0] = nextInput;
+                    List<ItemStack> searchResults = nextInput.isEmpty() ? allItems : IngredientManager.search(nextInput);
+                    page.updateSource(searchResults, view);
+                    updateArrows(view, page);
+                }
             })
             .onOpen(view -> {
                 InventoryBackupManager.setup(view);
                 page.renderTo(view);
+                updateArrows(view, page);
             })
             .onClose(InventoryBackupManager::restore)
             .build();

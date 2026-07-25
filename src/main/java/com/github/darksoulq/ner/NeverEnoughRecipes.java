@@ -12,6 +12,7 @@ import com.github.darksoulq.ner.plugin.InternalRegistration;
 import com.github.darksoulq.ner.plugin.NerPlugin;
 import com.github.darksoulq.ner.plugin.NerRegistrationEvent;
 import com.github.darksoulq.ner.plugin.VanillaNerPlugin;
+import com.github.darksoulq.ner.registry.GroupManager;
 import com.github.darksoulq.ner.registry.IngredientManager;
 import com.github.darksoulq.ner.registry.RecipeManager;
 import com.github.darksoulq.ner.resources.Pack;
@@ -69,6 +70,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
     public static void reloadRegistries() {
         IngredientManager.clear();
         RecipeManager.clear();
+        GroupManager.clear();
 
         InternalRegistration registration = new InternalRegistration();
         for (NerPlugin plugin : PLUGINS) {

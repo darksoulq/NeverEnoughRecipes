@@ -1,5 +1,8 @@
 package com.github.darksoulq.ner.registry;
 
+import com.github.darksoulq.abyssallib.common.util.Either;
+import com.github.darksoulq.ner.NeverEnoughRecipes;
+import com.github.darksoulq.ner.model.ItemGroup;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -23,7 +26,7 @@ public class IngredientManager {
     private static final List<Function<ItemStack, ItemStack>> DEDUPLICATORS = new ArrayList<>();
     private static final List<BiFunction<Player, ItemStack, ItemStack>> MODIFIERS = new ArrayList<>();
 
-    private static final Map<String, Comparator<ItemStack>> NAMESPACE_COMPARATORS = new ConcurrentHashMap<>();
+    private static final Map<String, Comparator<Either<ItemStack, ItemGroup>>> NAMESPACE_COMPARATORS = new ConcurrentHashMap<>();
     private static final Map<ItemStack, Integer> CUSTOM_ORDER = new ConcurrentHashMap<>();
     private static final AtomicInteger ORDER_COUNTER = new AtomicInteger(0);
 
@@ -55,7 +58,7 @@ public class IngredientManager {
         MODIFIERS.add(modifier);
     }
 
-    public static void setNamespaceComparator(String namespace, Comparator<ItemStack> comparator) {
+    public static void setNamespaceComparator(String namespace, Comparator<Either<ItemStack, ItemGroup>> comparator) {
         NAMESPACE_COMPARATORS.put(namespace.toLowerCase(Locale.ROOT), comparator);
     }
 
@@ -145,9 +148,21 @@ public class IngredientManager {
     }
 
     public static void sortItems(List<ItemStack> items) {
+        boolean groupsEnabled = NeverEnoughRecipes.CONFIG.enableItemGroups.get();
+
         items.sort((a, b) -> {
-            String nsA = getNamespace(a);
-            String nsB = getNamespace(b);
+            ItemGroup groupA = groupsEnabled ? GroupManager.getGroup(a) : null;
+            ItemGroup groupB = groupsEnabled ? GroupManager.getGroup(b) : null;
+
+            if (groupA != null && groupB != null && groupA.id().equals(groupB.id())) {
+                return Integer.compare(groupA.items().indexOf(a), groupB.items().indexOf(b));
+            }
+
+            ItemStack reprA = groupA != null && !groupA.items().isEmpty() ? groupA.items().getFirst() : a;
+            ItemStack reprB = groupB != null && !groupB.items().isEmpty() ? groupB.items().getFirst() : b;
+
+            String nsA = getNamespace(reprA);
+            String nsB = getNamespace(reprB);
 
             boolean aUnknown = nsA.equals("unknown");
             boolean bUnknown = nsB.equals("unknown");
@@ -164,13 +179,21 @@ public class IngredientManager {
             int nsCompare = nsA.compareToIgnoreCase(nsB);
             if (nsCompare != 0) return nsCompare;
 
-            Comparator<ItemStack> customComparator = NAMESPACE_COMPARATORS.get(nsA);
+            Comparator<Either<ItemStack, ItemGroup>> customComparator = NAMESPACE_COMPARATORS.get(nsA);
             if (customComparator != null) {
-                return customComparator.compare(a, b);
+                Either<ItemStack, ItemGroup> eitherA = groupA != null ? Either.right(groupA) : Either.left(a);
+                Either<ItemStack, ItemGroup> eitherB = groupB != null ? Either.right(groupB) : Either.left(b);
+                int result = customComparator.compare(eitherA, eitherB);
+                if (result != 0) return result;
+            } else {
+                String nameA = ITEM_SEARCH_CACHE.getOrDefault(reprA, "");
+                String nameB = ITEM_SEARCH_CACHE.getOrDefault(reprB, "");
+                int nameCompare = nameA.compareToIgnoreCase(nameB);
+                if (nameCompare != 0) return nameCompare;
             }
 
-            int orderA = CUSTOM_ORDER.getOrDefault(a, Integer.MAX_VALUE);
-            int orderB = CUSTOM_ORDER.getOrDefault(b, Integer.MAX_VALUE);
+            int orderA = CUSTOM_ORDER.getOrDefault(reprA, Integer.MAX_VALUE);
+            int orderB = CUSTOM_ORDER.getOrDefault(reprB, Integer.MAX_VALUE);
             return Integer.compare(orderA, orderB);
         });
     }

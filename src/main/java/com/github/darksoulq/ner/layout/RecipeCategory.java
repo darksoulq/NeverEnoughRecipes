@@ -14,6 +14,10 @@ public abstract class RecipeCategory<T> {
     public abstract Set<Integer> getResultSlots();
     public abstract Set<Integer> getIgnoredSlots();
 
+    public boolean isCraftableCategory() {
+        return true;
+    }
+
     protected void applyChoice(Map<Integer, List<ItemStack>> map, int slot, RecipeChoice choice) {
         if (choice == null || choice.equals(RecipeChoice.empty())) return;
         if (choice instanceof RecipeChoice.MaterialChoice mat) {

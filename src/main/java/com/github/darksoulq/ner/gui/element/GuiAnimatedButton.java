@@ -12,7 +12,7 @@ public class GuiAnimatedButton extends GuiAnimatedItem {
     private final Consumer<GuiClickContext> action;
 
     public GuiAnimatedButton(List<ItemStack> frames, int interval, Consumer<GuiClickContext> action) {
-        super((_, tick) -> {
+        super((ignored, tick) -> {
             int safeInterval = Math.max(1, interval);
             int index = (tick / safeInterval) % frames.size();
             return frames.get(index);
