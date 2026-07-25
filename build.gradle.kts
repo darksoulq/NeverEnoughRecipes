@@ -118,7 +118,7 @@ runPaper { folia.registerTask() }
 tasks {
     withType<Jar>().configureEach {
         archiveVersion.set(project.version.toString())
-        archiveBaseName.set(project.name)
+        archiveBaseName.set("NeverEnoughRecipes")
         activeExcludes.forEach { exclude(it) }
     }
 
