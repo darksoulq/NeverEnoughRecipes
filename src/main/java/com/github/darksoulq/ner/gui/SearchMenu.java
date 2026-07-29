@@ -1,7 +1,9 @@
 package com.github.darksoulq.ner.gui;
 
+import com.github.darksoulq.abyssallib.AbyssalLib;
 import com.github.darksoulq.abyssallib.common.util.TextUtil;
 import com.github.darksoulq.abyssallib.server.resource.util.TextOffset;
+import com.github.darksoulq.abyssallib.server.scheduler.Clock;
 import com.github.darksoulq.abyssallib.world.gui.Gui;
 import com.github.darksoulq.abyssallib.world.gui.GuiFlag;
 import com.github.darksoulq.abyssallib.world.gui.GuiManager;
@@ -49,6 +51,7 @@ public class SearchMenu {
     public static Gui create(Player player) {
         List<ItemStack> allItems = IngredientManager.getItems();
         final String[] activeInput = { "" };
+        final boolean[] transitioning = { false };
 
         DynamicPagedLayer<ItemStack> page = new DynamicPagedLayer<>(allItems, SLOTS, Segment.BOTTOM,
             (item, ignored) -> {
@@ -59,10 +62,12 @@ public class SearchMenu {
                     if (action == null) return;
 
                     if (action == ControlAction.VIEW_RECIPE && !RecipeManager.getRecipes(item).isEmpty()) {
+                        transitioning[0] = true;
                         GuiHistory.push(player, () -> GuiManager.open(player, create(player)));
                         InventoryBackupManager.transition(ctx.view());
                         GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.RECIPE));
                     } else if (action == ControlAction.VIEW_USES && !RecipeManager.getUses(item).isEmpty()) {
+                        transitioning[0] = true;
                         GuiHistory.push(player, () -> GuiManager.open(player, create(player)));
                         InventoryBackupManager.transition(ctx.view());
                         GuiManager.open(player, RecipeViewer.create(player, item, RecipeViewer.Type.USE));
@@ -120,7 +125,11 @@ public class SearchMenu {
                 page.renderTo(view);
                 updateArrows(view, page);
             })
-            .onClose(InventoryBackupManager::restore)
-            .build();
+            .onClose(view -> {
+                InventoryBackupManager.restore(view);
+                if (!transitioning[0] && UserManager.get(player.getUniqueId()).returnToMenuOnSearchClose.get()) {
+                    AbyssalLib.SCHEDULER.schedule(() -> GuiManager.open(player, MainMenu.create(player))).after(1L, Clock.TICKS).entity(player).once();
+                }
+            }).build();
     }
 }

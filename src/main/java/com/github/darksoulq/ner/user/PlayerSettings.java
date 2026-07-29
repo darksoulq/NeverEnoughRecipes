@@ -17,18 +17,23 @@ public class PlayerSettings {
     public final Config.Value<Map<ControlAction, ClickType>> bindings;
     public final Config.Value<List<ItemStack>> favourites;
     public final Config.Value<List<ItemStack>> recents;
+    public final Config.Value<Boolean> returnToMenuOnSearchClose;
+    public final Config.Value<Boolean> returnToMenuOnConfigClose;
 
     public PlayerSettings(UUID uuid) {
         this.config = new Config("ner", uuid.toString(), "users").schema(1).apply();
-        
+
         Map<ControlAction, ClickType> defaultBinds = new EnumMap<>(ControlAction.class);
         for (ControlAction action : ControlAction.values()) {
             defaultBinds.put(action, action.defaultBind);
         }
-        
+
         this.bindings = config.value("bindings", defaultBinds, BINDS_CODEC);
         this.favourites = config.value("favourites", new ArrayList<>());
         this.recents = config.value("recents", new ArrayList<>());
+        this.returnToMenuOnSearchClose = config.value("return_to_menu_on_search_close", true);
+        this.returnToMenuOnConfigClose = config.value("return_to_menu_on_config_close", false);
+
         config.save();
     }
 
@@ -38,7 +43,7 @@ public class PlayerSettings {
 
     public void setBind(ControlAction action, ClickType type) {
         Map<ControlAction, ClickType> current = new EnumMap<>(bindings.get());
-        
+
         ControlAction collided = null;
         for (Map.Entry<ControlAction, ClickType> entry : current.entrySet()) {
             if (entry.getValue() == type && entry.getKey() != action) {
@@ -46,14 +51,14 @@ public class PlayerSettings {
                 break;
             }
         }
-        
+
         ClickType oldType = current.get(action);
         current.put(action, type);
-        
+
         if (collided != null) {
             current.put(collided, oldType != null ? oldType : collided.defaultBind);
         }
-        
+
         bindings.set(current);
         config.save();
     }

@@ -19,7 +19,7 @@ plugins {
 
 group = "io.github.darksoulq"
 val mcVersion = stonecutter.current.project
-version = "1.3.0-mc.${mcVersion}"
+version = "1.4.0-mc.${mcVersion}"
 
 val yamlParser = Yaml()
 
@@ -171,7 +171,7 @@ tasks {
 }
 
 centralPortal {
-    name = project.name
+    name = "NeverEnoughRecipes"
     publishingType = PublishingType.AUTOMATIC
     pom {
         name = project.name
@@ -201,7 +201,7 @@ publishing {
     publications {
         create<MavenPublication>("snapshot") {
             from(components["java"])
-            artifactId = project.name
+            artifactId = "NeverEnoughRecipes"
 
             pom {
                 name.set(project.name)

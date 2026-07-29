@@ -25,6 +25,7 @@ import com.github.darksoulq.ner.resources.UiItems;
 import com.github.darksoulq.ner.user.PlayerSettings;
 import com.github.darksoulq.ner.user.UserManager;
 import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ItemLore;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Material;
@@ -122,6 +123,8 @@ public class MainMenu {
                     ItemGroup group = ge.group();
                     if (group.items().isEmpty()) return new GuiItem(ItemStack.empty());
 
+                    ItemLore expandLore = ItemLore.lore().addLine(TextUtil.parse("<!italic><gray>Click to expand")).build();
+
                     if (group.animate() && group.items().size() > 1) {
                         List<ItemStack> frames = new ArrayList<>();
                         for (ItemStack gi : group.items()) {
@@ -129,6 +132,7 @@ public class MainMenu {
                             if (!group.title().equals(Component.empty())) {
                                 frame.setData(DataComponentTypes.ITEM_NAME, group.title());
                             }
+                            frame.setData(DataComponentTypes.LORE, expandLore);
                             frames.add(frame);
                         }
                         return new GuiAnimatedButton(frames, 20, ctx -> {
@@ -142,6 +146,7 @@ public class MainMenu {
                         if (!group.title().equals(Component.empty())) {
                             display.setData(DataComponentTypes.ITEM_NAME, group.title());
                         }
+                        display.setData(DataComponentTypes.LORE, expandLore);
                         return new GuiButton(display, ctx -> {
                             expanded.add(group.id());
                             DynamicPagedLayer<GuiEntry> layer = (DynamicPagedLayer<GuiEntry>) ctx.view().getGui().getLayers().getFirst();
@@ -154,6 +159,8 @@ public class MainMenu {
                     if (!gce.group().title().equals(Component.empty())) {
                         barrier.setData(DataComponentTypes.ITEM_NAME, gce.group().title());
                     }
+                    ItemLore collapseLore = ItemLore.lore().addLine(TextUtil.parse("<!italic><gray>Click to collapse")).build();
+                    barrier.setData(DataComponentTypes.LORE, collapseLore);
                     return new GuiButton(barrier, ctx -> {
                         expanded.remove(gce.group().id());
                         DynamicPagedLayer<GuiEntry> layer = (DynamicPagedLayer<GuiEntry>) ctx.view().getGui().getLayers().getFirst();

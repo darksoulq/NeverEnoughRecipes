@@ -3,7 +3,6 @@ package com.github.darksoulq.ner.registry;
 import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.model.GuiEntry;
 import com.github.darksoulq.ner.model.ItemGroup;
-import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -14,24 +13,21 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GroupManager {
-    private static final Map<String, ItemGroup> GROUPS = new ConcurrentHashMap<>();
-    private static final Map<Material, ItemGroup> MATERIAL_TO_GROUP = new ConcurrentHashMap<>();
+    private static final Map<ItemStack, ItemGroup> ITEMSTACK_TO_GROUP = new ConcurrentHashMap<>();
 
     public static void clear() {
-        GROUPS.clear();
-        MATERIAL_TO_GROUP.clear();
+        ITEMSTACK_TO_GROUP.clear();
     }
 
     public static void addGroup(ItemGroup group) {
-        GROUPS.put(group.id(), group);
         for (ItemStack item : group.items()) {
-            MATERIAL_TO_GROUP.put(item.getType(), group);
+            ITEMSTACK_TO_GROUP.put(item, group);
         }
     }
 
     public static ItemGroup getGroup(ItemStack item) {
         if (item == null || item.isEmpty()) return null;
-        return MATERIAL_TO_GROUP.get(item.getType());
+        return ITEMSTACK_TO_GROUP.get(item);
     }
 
     public static List<GuiEntry> buildEntries(Set<String> expandedGroups) {
