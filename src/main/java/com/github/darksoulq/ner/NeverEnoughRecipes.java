@@ -78,6 +78,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
         }
 
         EventBus.post(new NerRegistrationEvent(registration));
+        IngredientManager.runNamespaceProviders();
         RecipeManager.compile();
     }
 }

@@ -14,6 +14,8 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -26,6 +28,16 @@ public class InternalRegistration implements Registration {
     @Override
     public void addCatalyst(Class<?> recipeClass, ItemStack catalyst) {
         RecipeManager.addCatalyst(recipeClass, catalyst);
+    }
+
+    @Override
+    public void setNamespace(String namespace, ItemStack item) {
+        IngredientManager.setNamespace(namespace, item);
+    }
+
+    @Override
+    public void setNamespaces(Consumer<NamespaceContext> provider) {
+        IngredientManager.setNamespaces(provider);
     }
 
     @Override
@@ -64,8 +76,18 @@ public class InternalRegistration implements Registration {
     }
 
     @Override
+    public void addVisibilityRule(BiPredicate<Player, ItemStack> rule) {
+        IngredientManager.addVisibilityRule(rule);
+    }
+
+    @Override
     public void addFilter(String prefix, BiFunction<String, ItemStack, Boolean> filter) {
         IngredientManager.addFilter(prefix, filter);
+    }
+
+    @Override
+    public void addNestedFilter(String prefix, Function<Predicate<ItemStack>, Predicate<ItemStack>> operator) {
+        IngredientManager.addNestedFilter(prefix, operator);
     }
 
     @Override

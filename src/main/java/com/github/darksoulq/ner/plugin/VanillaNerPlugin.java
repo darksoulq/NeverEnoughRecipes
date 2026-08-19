@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-@SuppressWarnings("UnstableApiUsage")
 public class VanillaNerPlugin implements NerPlugin {
 
     private static final Map<Material, Integer> CREATIVE_ORDER = new EnumMap<>(Material.class);
@@ -86,6 +85,8 @@ public class VanillaNerPlugin implements NerPlugin {
     @Override
     public void register(Registration registry) {
         loadVanillaTags();
+
+        registry.addNestedFilter("-", inner -> item -> !inner.test(item));
 
         registry.addDeduplicator(item -> {
             if (item.getType() == Material.SUSPICIOUS_STEW) {

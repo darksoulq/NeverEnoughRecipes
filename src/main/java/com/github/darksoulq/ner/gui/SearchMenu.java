@@ -33,6 +33,7 @@ import org.bukkit.inventory.view.AnvilView;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("UnstableApiUsage")
 public class SearchMenu {
@@ -49,7 +50,10 @@ public class SearchMenu {
     }
 
     public static Gui create(Player player) {
-        List<ItemStack> allItems = IngredientManager.getItems();
+        List<ItemStack> allItems = IngredientManager.getItems().stream()
+            .filter(item -> IngredientManager.isVisible(player, item))
+            .collect(Collectors.toList());
+
         final String[] activeInput = { "" };
         final boolean[] transitioning = { false };
 
@@ -115,7 +119,9 @@ public class SearchMenu {
 
                 if (!activeInput[0].equals(nextInput)) {
                     activeInput[0] = nextInput;
-                    List<ItemStack> searchResults = nextInput.isEmpty() ? allItems : IngredientManager.search(nextInput);
+                    List<ItemStack> searchResults = nextInput.isEmpty() ? allItems : IngredientManager.search(nextInput).stream()
+                        .filter(item -> IngredientManager.isVisible(player, item))
+                        .collect(Collectors.toList());
                     page.updateSource(searchResults, view);
                     updateArrows(view, page);
                 }

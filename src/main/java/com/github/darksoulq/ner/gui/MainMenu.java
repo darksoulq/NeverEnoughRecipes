@@ -79,7 +79,7 @@ public class MainMenu {
     public static Gui create(Player player, FilterMode mode, int topPage, Set<String> expanded) {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
 
-        List<GuiEntry> allEntries = GroupManager.buildEntries(expanded);
+        List<GuiEntry> allEntries = GroupManager.buildEntries(player, expanded);
         List<GuiEntry> topSource = new ArrayList<>();
 
         if (mode == FilterMode.RECENT) {
@@ -123,7 +123,10 @@ public class MainMenu {
                     ItemGroup group = ge.group();
                     if (group.items().isEmpty()) return new GuiItem(ItemStack.empty());
 
-                    ItemLore expandLore = ItemLore.lore().addLine(TextUtil.parse("<!italic><gray>Click to expand")).build();
+                    ItemLore expandLore = ItemLore.lore()
+                        .addLine(TextUtil.parse("<!italic><gray>Items: <white>" + group.items().size()))
+                        .addLine(TextUtil.parse("<!italic><gray>Click to expand"))
+                        .build();
 
                     if (group.animate() && group.items().size() > 1) {
                         List<ItemStack> frames = new ArrayList<>();
@@ -138,7 +141,7 @@ public class MainMenu {
                         return new GuiAnimatedButton(frames, 20, ctx -> {
                             expanded.add(group.id());
                             DynamicPagedLayer<GuiEntry> layer = (DynamicPagedLayer<GuiEntry>) ctx.view().getGui().getLayers().getFirst();
-                            layer.updateSource(GroupManager.buildEntries(expanded), ctx.view());
+                            layer.updateSource(GroupManager.buildEntries(player, expanded), ctx.view());
                             updateArrows(ctx.view(), layer);
                         });
                     } else {
@@ -150,7 +153,7 @@ public class MainMenu {
                         return new GuiButton(display, ctx -> {
                             expanded.add(group.id());
                             DynamicPagedLayer<GuiEntry> layer = (DynamicPagedLayer<GuiEntry>) ctx.view().getGui().getLayers().getFirst();
-                            layer.updateSource(GroupManager.buildEntries(expanded), ctx.view());
+                            layer.updateSource(GroupManager.buildEntries(player, expanded), ctx.view());
                             updateArrows(ctx.view(), layer);
                         });
                     }
@@ -159,12 +162,15 @@ public class MainMenu {
                     if (!gce.group().title().equals(Component.empty())) {
                         barrier.setData(DataComponentTypes.ITEM_NAME, gce.group().title());
                     }
-                    ItemLore collapseLore = ItemLore.lore().addLine(TextUtil.parse("<!italic><gray>Click to collapse")).build();
+                    ItemLore collapseLore = ItemLore.lore()
+                        .addLine(TextUtil.parse("<!italic><gray>Items: <white>" + gce.group().items().size()))
+                        .addLine(TextUtil.parse("<!italic><gray>Click to collapse"))
+                        .build();
                     barrier.setData(DataComponentTypes.LORE, collapseLore);
                     return new GuiButton(barrier, ctx -> {
                         expanded.remove(gce.group().id());
                         DynamicPagedLayer<GuiEntry> layer = (DynamicPagedLayer<GuiEntry>) ctx.view().getGui().getLayers().getFirst();
-                        layer.updateSource(GroupManager.buildEntries(expanded), ctx.view());
+                        layer.updateSource(GroupManager.buildEntries(player, expanded), ctx.view());
                         updateArrows(ctx.view(), layer);
                     });
                 }

@@ -3,6 +3,7 @@ package com.github.darksoulq.ner.registry;
 import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.model.GuiEntry;
 import com.github.darksoulq.ner.model.ItemGroup;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -30,12 +31,14 @@ public class GroupManager {
         return ITEMSTACK_TO_GROUP.get(item);
     }
 
-    public static List<GuiEntry> buildEntries(Set<String> expandedGroups) {
+    public static List<GuiEntry> buildEntries(Player player, Set<String> expandedGroups) {
         List<GuiEntry> entries = new ArrayList<>();
         Set<String> seenGroups = new HashSet<>();
         boolean groupsEnabled = NeverEnoughRecipes.CONFIG.enableItemGroups.get();
 
         for (ItemStack item : IngredientManager.getItems()) {
+            if (!IngredientManager.isVisible(player, item)) continue;
+
             if (groupsEnabled) {
                 ItemGroup group = getGroup(item);
                 if (group != null) {
@@ -43,7 +46,7 @@ public class GroupManager {
                         if (expandedGroups.contains(group.id())) {
                             entries.add(new GuiEntry.GroupCollapseEntry(group));
                             for (ItemStack groupItem : group.items()) {
-                                if (!IngredientManager.isHidden(groupItem)) {
+                                if (IngredientManager.isVisible(player, groupItem)) {
                                     entries.add(new GuiEntry.ItemEntry(groupItem));
                                 }
                             }

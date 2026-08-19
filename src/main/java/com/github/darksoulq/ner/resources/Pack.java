@@ -80,6 +80,7 @@ public class Pack {
         Model mod = ns.model(name, false);
         mod.parent("minecraft:item/generated");
         mod.texture("layer0", tex);
+        mod.display("firstperson_righthand", new Model.Display().translation(0, -10, 0));
         ns.itemDefinition(name, new Selector.Model(mod), true);
     }
 }

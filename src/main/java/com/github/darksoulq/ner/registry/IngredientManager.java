@@ -3,6 +3,7 @@ package com.github.darksoulq.ner.registry;
 import com.github.darksoulq.abyssallib.common.util.Either;
 import com.github.darksoulq.ner.NeverEnoughRecipes;
 import com.github.darksoulq.ner.model.ItemGroup;
+import com.github.darksoulq.ner.plugin.Registration;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -13,18 +14,27 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class IngredientManager {
+    private static final Pattern SEARCH_PATTERN = Pattern.compile("([^\\s\"]*)\"([^\"]+)\"|(\\S+)");
+
     private static final Map<String, BiFunction<String, ItemStack, Boolean>> FILTERS = new ConcurrentHashMap<>();
+    private static final Map<String, Function<Predicate<ItemStack>, Predicate<ItemStack>>> NESTED_FILTERS = new ConcurrentHashMap<>();
     private static final Set<ItemStack> ALL_ITEMS = ConcurrentHashMap.newKeySet();
     private static final Set<ItemStack> HIDDEN_ITEMS = ConcurrentHashMap.newKeySet();
+    private static final List<BiPredicate<Player, ItemStack>> VISIBILITY_RULES = new ArrayList<>();
     private static final Map<ItemStack, String> ITEM_NAMESPACES = new ConcurrentHashMap<>();
     private static final Map<ItemStack, String> ITEM_SEARCH_CACHE = new ConcurrentHashMap<>();
     private static final List<Function<ItemStack, ItemStack>> DEDUPLICATORS = new ArrayList<>();
     private static final List<BiFunction<Player, ItemStack, ItemStack>> MODIFIERS = new ArrayList<>();
+    private static final List<Consumer<Registration.NamespaceContext>> NAMESPACE_PROVIDERS = new ArrayList<>();
 
     private static final Map<String, Comparator<Either<ItemStack, ItemGroup>>> NAMESPACE_COMPARATORS = new ConcurrentHashMap<>();
     private static final Map<ItemStack, Integer> CUSTOM_ORDER = new ConcurrentHashMap<>();
@@ -34,12 +44,15 @@ public class IngredientManager {
 
     public static void clear() {
         FILTERS.clear();
+        NESTED_FILTERS.clear();
         ALL_ITEMS.clear();
         HIDDEN_ITEMS.clear();
+        VISIBILITY_RULES.clear();
         ITEM_NAMESPACES.clear();
         ITEM_SEARCH_CACHE.clear();
         DEDUPLICATORS.clear();
         MODIFIERS.clear();
+        NAMESPACE_PROVIDERS.clear();
         NAMESPACE_COMPARATORS.clear();
         CUSTOM_ORDER.clear();
         ORDER_COUNTER.set(0);
@@ -48,6 +61,14 @@ public class IngredientManager {
 
     public static void addFilter(String prefix, BiFunction<String, ItemStack, Boolean> filter) {
         FILTERS.put(prefix, filter);
+    }
+
+    public static void addNestedFilter(String prefix, Function<Predicate<ItemStack>, Predicate<ItemStack>> operator) {
+        NESTED_FILTERS.put(prefix, operator);
+    }
+
+    public static void addVisibilityRule(BiPredicate<Player, ItemStack> rule) {
+        VISIBILITY_RULES.add(rule);
     }
 
     public static void addDeduplicator(Function<ItemStack, ItemStack> deduplicator) {
@@ -60,6 +81,35 @@ public class IngredientManager {
 
     public static void setNamespaceComparator(String namespace, Comparator<Either<ItemStack, ItemGroup>> comparator) {
         NAMESPACE_COMPARATORS.put(namespace.toLowerCase(Locale.ROOT), comparator);
+    }
+
+    public static void setNamespaces(Consumer<Registration.NamespaceContext> provider) {
+        NAMESPACE_PROVIDERS.add(provider);
+    }
+
+    public static void runNamespaceProviders() {
+        Registration.NamespaceContext ctx = new Registration.NamespaceContext() {
+            @Override
+            public void set(String namespace, ItemStack item) {
+                setNamespace(namespace, deduplicate(item.asOne()));
+            }
+
+            @Override
+            public void set(String namespace, Iterable<ItemStack> items) {
+                for (ItemStack item : items) {
+                    setNamespace(namespace, deduplicate(item.asOne()));
+                }
+            }
+
+            @Override
+            public List<ItemStack> getItems() {
+                return new ArrayList<>(ALL_ITEMS);
+            }
+        };
+
+        for (Consumer<Registration.NamespaceContext> provider : NAMESPACE_PROVIDERS) {
+            provider.accept(ctx);
+        }
     }
 
     public static ItemStack deduplicate(ItemStack item) {
@@ -111,6 +161,11 @@ public class IngredientManager {
         }
     }
 
+    public static void setNamespace(String namespace, ItemStack item) {
+        if (item == null || item.isEmpty()) return;
+        ITEM_NAMESPACES.put(item, namespace);
+    }
+
     public static void removeItem(ItemStack item) {
         if (item == null || item.isEmpty()) return;
         ItemStack normalized = deduplicate(item.asOne());
@@ -138,6 +193,16 @@ public class IngredientManager {
 
     public static boolean isHidden(ItemStack item) {
         return HIDDEN_ITEMS.contains(deduplicate(item.asOne()));
+    }
+
+    public static boolean isVisible(Player player, ItemStack item) {
+        if (item == null || item.isEmpty()) return false;
+        ItemStack normalized = deduplicate(item.asOne());
+        if (HIDDEN_ITEMS.contains(normalized)) return false;
+        for (BiPredicate<Player, ItemStack> rule : VISIBILITY_RULES) {
+            if (!rule.test(player, normalized)) return false;
+        }
+        return true;
     }
 
     public static String getNamespace(ItemStack item) {
@@ -210,20 +275,63 @@ public class IngredientManager {
     public static List<ItemStack> search(String query) {
         if (query == null || query.isBlank()) return getItems();
 
-        String lowerQuery = query.toLowerCase(Locale.ROOT);
-        List<ItemStack> results = null;
+        List<String> tokens = new ArrayList<>();
+        Matcher m = SEARCH_PATTERN.matcher(query.toLowerCase(Locale.ROOT));
 
-        for (Map.Entry<String, BiFunction<String, ItemStack, Boolean>> entry : FILTERS.entrySet()) {
-            String prefix = entry.getKey();
-            if (lowerQuery.startsWith(prefix)) {
-                String term = lowerQuery.substring(prefix.length());
-                results = ALL_ITEMS.stream().filter(item -> entry.getValue().apply(term, item)).collect(Collectors.toList());
-                break;
+        while (m.find()) {
+            if (m.group(2) != null) {
+                String prefix = m.group(1) != null ? m.group(1) : "";
+                tokens.add(prefix + m.group(2));
+            } else if (m.group(3) != null) {
+                tokens.add(m.group(3));
             }
         }
 
-        if (results == null) {
-            results = ALL_ITEMS.stream().filter(item -> ITEM_SEARCH_CACHE.getOrDefault(item, "").contains(lowerQuery)).collect(Collectors.toList());
+        List<ItemStack> results = new ArrayList<>(ALL_ITEMS);
+
+        for (String token : tokens) {
+            if (token.isBlank()) continue;
+
+            List<Function<Predicate<ItemStack>, Predicate<ItemStack>>> appliedNested = new ArrayList<>();
+            String term = token;
+            boolean matchedNested;
+
+            do {
+                matchedNested = false;
+                for (Map.Entry<String, Function<Predicate<ItemStack>, Predicate<ItemStack>>> entry : NESTED_FILTERS.entrySet()) {
+                    if (term.startsWith(entry.getKey())) {
+                        appliedNested.add(entry.getValue());
+                        term = term.substring(entry.getKey().length());
+                        matchedNested = true;
+                        break;
+                    }
+                }
+            } while (matchedNested);
+
+            BiFunction<String, ItemStack, Boolean> activeFilter = null;
+            for (Map.Entry<String, BiFunction<String, ItemStack, Boolean>> entry : FILTERS.entrySet()) {
+                if (term.startsWith(entry.getKey())) {
+                    activeFilter = entry.getValue();
+                    term = term.substring(entry.getKey().length());
+                    break;
+                }
+            }
+
+            final String finalTerm = term;
+            final BiFunction<String, ItemStack, Boolean> finalFilter = activeFilter;
+
+            Predicate<ItemStack> predicate;
+            if (finalFilter != null) {
+                predicate = item -> finalFilter.apply(finalTerm, item);
+            } else {
+                predicate = item -> ITEM_SEARCH_CACHE.getOrDefault(item, "").contains(finalTerm);
+            }
+
+            for (int i = appliedNested.size() - 1; i >= 0; i--) {
+                predicate = appliedNested.get(i).apply(predicate);
+            }
+
+            results = results.stream().filter(predicate).collect(Collectors.toList());
         }
 
         sortItems(results);

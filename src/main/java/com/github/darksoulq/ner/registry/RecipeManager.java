@@ -25,6 +25,7 @@ public class RecipeManager {
 
     private static final Map<ItemStack, List<ParsedRecipeView>> RECIPES_CACHE = new ConcurrentHashMap<>();
     private static final Map<ItemStack, List<ParsedRecipeView>> USES_CACHE = new ConcurrentHashMap<>();
+    private static final List<ParsedRecipeView> ALL_COMPILED_VIEWS = new ArrayList<>();
 
     public static void clear() {
         CATEGORIES.clear();
@@ -35,6 +36,7 @@ public class RecipeManager {
         RECIPE_TO_CATEGORY.clear();
         RECIPES_CACHE.clear();
         USES_CACHE.clear();
+        ALL_COMPILED_VIEWS.clear();
     }
 
     public static void addCategory(RecipeCategory<?> category) {
@@ -73,33 +75,53 @@ public class RecipeManager {
         return USES_CACHE.getOrDefault(IngredientManager.deduplicate(item.asOne()), Collections.emptyList());
     }
 
+    public static List<ParsedRecipeView> getAllRecipes() {
+        return Collections.unmodifiableList(ALL_COMPILED_VIEWS);
+    }
+
+    public static Object getRawRecipe(ParsedRecipeView view) {
+        return VIEW_TO_RECIPE.get(view);
+    }
+
+    public static RecipeCategory<?> getCategory(ParsedRecipeView view) {
+        Object raw = VIEW_TO_RECIPE.get(view);
+        return raw != null ? RECIPE_TO_CATEGORY.get(raw) : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static boolean isCraftable(Player player, ParsedRecipeView view) {
+        if (view == null) return false;
+        Object raw = VIEW_TO_RECIPE.get(view);
+        if (raw == null) return false;
+
+        RecipeCategory<?> cat = RECIPE_TO_CATEGORY.get(raw);
+        if (cat != null && !cat.isCraftableCategory()) {
+            return false;
+        }
+
+        CraftabilityChecker<Object> checker = null;
+        for (Map.Entry<Class<?>, CraftabilityChecker<?>> entry : CRAFTABILITY_CHECKERS.entrySet()) {
+            if (entry.getKey().isAssignableFrom(raw.getClass())) {
+                checker = (CraftabilityChecker<Object>) entry.getValue();
+                break;
+            }
+        }
+
+        if (checker != null) {
+            return checker.canCraft(player, raw);
+        } else if (cat != null) {
+            return defaultCraftCheck(player, view, cat);
+        }
+        return false;
+    }
+
     @SuppressWarnings("unchecked")
     public static boolean isCraftable(Player player, ItemStack item) {
         List<ParsedRecipeView> recipes = getRecipes(item);
         if (recipes.isEmpty()) return false;
 
         for (ParsedRecipeView view : recipes) {
-            Object raw = VIEW_TO_RECIPE.get(view);
-            if (raw != null) {
-                RecipeCategory<?> cat = RECIPE_TO_CATEGORY.get(raw);
-                if (cat != null && !cat.isCraftableCategory()) {
-                    continue;
-                }
-
-                CraftabilityChecker<Object> checker = null;
-                for (Map.Entry<Class<?>, CraftabilityChecker<?>> entry : CRAFTABILITY_CHECKERS.entrySet()) {
-                    if (entry.getKey().isAssignableFrom(raw.getClass())) {
-                        checker = (CraftabilityChecker<Object>) entry.getValue();
-                        break;
-                    }
-                }
-
-                if (checker != null) {
-                    if (checker.canCraft(player, raw)) return true;
-                } else if (cat != null) {
-                    if (defaultCraftCheck(player, view, cat)) return true;
-                }
-            }
+            if (isCraftable(player, view)) return true;
         }
         return false;
     }
@@ -141,6 +163,7 @@ public class RecipeManager {
         USES_CACHE.clear();
         VIEW_TO_RECIPE.clear();
         RECIPE_TO_CATEGORY.clear();
+        ALL_COMPILED_VIEWS.clear();
 
         for (Object recipe : RAW_RECIPES) {
             RecipeCategory<?> rawCat = null;
@@ -199,6 +222,8 @@ public class RecipeManager {
             }
 
             if (producesHidden) continue;
+
+            ALL_COMPILED_VIEWS.add(parsed);
 
             for (RecipeStage stage : parsed.stages()) {
                 processItems(stage.slots(), results, ignored, parsed);
