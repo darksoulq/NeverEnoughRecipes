@@ -20,13 +20,14 @@ public class InventoryBackupManager {
     }
 
     public static void setup(GuiView view) {
+        save(view.getPlayer());
+
         view.getBottom().clear();
         view.getTop().setItem(0, ItemStack.of(Material.AIR));
     }
 
     public static void restore(GuiView view) {
         view.getTop().setItem(0, ItemStack.of(Material.AIR));
-        view.getBottom().clear();
 
         Player player = view.getPlayer();
         if (!GuiManager.OPEN_VIEWS.containsKey(view.getInventoryView())) {
@@ -38,7 +39,6 @@ public class InventoryBackupManager {
     }
 
     public static void transition(GuiView view) {
-        view.getBottom().clear();
         view.getTop().clear();
         GuiManager.remove(view);
     }

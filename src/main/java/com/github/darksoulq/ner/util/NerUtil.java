@@ -63,7 +63,6 @@ public final class NerUtil {
             }
             return list;
         }
-
         public ItemStack getPrimaryResult() {
             List<ItemStack> primary = getPrimaryOutputs();
             return primary.isEmpty() ? null : primary.getFirst();
