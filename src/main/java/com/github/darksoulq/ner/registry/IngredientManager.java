@@ -1,13 +1,19 @@
 package com.github.darksoulq.ner.registry;
 
 import com.github.darksoulq.abyssallib.common.util.Either;
+import com.github.darksoulq.abyssallib.common.util.TextUtil;
 import com.github.darksoulq.ner.NeverEnoughRecipes;
+import com.github.darksoulq.ner.model.ControlAction;
 import com.github.darksoulq.ner.model.ItemGroup;
 import com.github.darksoulq.ner.plugin.Registration;
+import com.github.darksoulq.ner.user.PlayerSettings;
+import com.github.darksoulq.ner.user.UserManager;
 import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ItemLore;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
@@ -127,7 +133,49 @@ public class IngredientManager {
         for (BiFunction<Player, ItemStack, ItemStack> func : MODIFIERS) {
             current = func.apply(player, current);
         }
-        return current;
+        return applyTooltips(player, current);
+    }
+
+    private static ItemStack applyTooltips(Player player, ItemStack item) {
+        if (item == null || item.isEmpty()) return item;
+        PlayerSettings settings = UserManager.get(player.getUniqueId());
+        if (!settings.showTooltips.get()) return item;
+
+        List<Component> extraLore = new ArrayList<>();
+        ClickType recipeBind = settings.getBind(ControlAction.VIEW_RECIPE);
+        ClickType usesBind = settings.getBind(ControlAction.VIEW_USES);
+
+        boolean hasRecipes = !RecipeManager.getRecipes(item).isEmpty();
+        boolean hasUses = !RecipeManager.getUses(item).isEmpty();
+
+        if (hasRecipes) {
+            extraLore.add(TextUtil.parse("<!italic><dark_gray>" + formatBind(recipeBind) + " for Recipes"));
+        }
+        if (hasUses) {
+            extraLore.add(TextUtil.parse("<!italic><dark_gray>" + formatBind(usesBind) + " for Uses"));
+        }
+
+        if (extraLore.isEmpty()) return item;
+
+        List<Component> lines = new ArrayList<>();
+        if (item.hasData(DataComponentTypes.LORE)) {
+            lines.addAll(item.getData(DataComponentTypes.LORE).lines());
+        }
+        lines.addAll(extraLore);
+        item.setData(DataComponentTypes.LORE, ItemLore.lore().lines(lines).build());
+        return item;
+    }
+
+    private static String formatBind(ClickType type) {
+        switch (type) {
+            case LEFT: return "Left Click";
+            case RIGHT: return "Right Click";
+            case SHIFT_LEFT: return "Shift + Left Click";
+            case SHIFT_RIGHT: return "Shift + Right Click";
+            case MIDDLE: return "Middle Click";
+            case DROP: return "Drop";
+            default: return type.name();
+        }
     }
 
     public static void addItem(ItemStack item) {

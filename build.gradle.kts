@@ -19,7 +19,7 @@ plugins {
 
 group = "io.github.darksoulq"
 val mcVersion = stonecutter.current.project
-version = "1.5.1-mc.${mcVersion}"
+version = "1.6.0-mc.${mcVersion}"
 
 val yamlParser = Yaml()
 
@@ -135,7 +135,7 @@ tasks {
         minecraftVersion(mcVersion)
         jvmArgs("-Xms2G", "-Xmx2G", "-Dcom.mojang.eula.agree=true")
         downloadPlugins {
-            modrinth("AbyssalLib", "2.4.0-mc.${mcVersion}-alpha.2")
+            modrinth("AbyssalLib", "2.5.0-mc.${mcVersion}-alpha.1")
         }
     }
 
@@ -143,7 +143,7 @@ tasks {
         minecraftVersion(mcVersion)
         jvmArgs("-Xms2G", "-Xmx2G", "-Dcom.mojang.eula.agree=true")
         downloadPlugins {
-            modrinth("AbyssalLib", "2.4.0-mc.${mcVersion}-alpha.2")
+            modrinth("AbyssalLib", "2.5.0-mc.${mcVersion}-alpha.1")
         }
     }
 

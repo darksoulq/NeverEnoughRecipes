@@ -33,6 +33,7 @@ public class ControlsMenu {
             .set(SlotPosition.top(15), buildButton(ControlAction.TOGGLE_BOOKMARK, player))
             .set(SlotPosition.top(20), buildReturnFromSearchToggle(player))
             .set(SlotPosition.top(21), buildReturnFromConfigToggle(player))
+            .set(SlotPosition.top(22), buildShowTooltipsToggle(player))
             .set(SlotPosition.top(35), new GuiButton(UiItems.CLOSE.getStack(), ctx -> {
                 InventoryBackupManager.transition(ctx.view());
                 if (settings.returnToMenuOnConfigClose.get()) {
@@ -101,6 +102,25 @@ public class ControlsMenu {
         });
         return new GuiButton(item, ctx -> {
             settings.returnToMenuOnConfigClose.set(!enabled);
+            settings.config.save();
+            InventoryBackupManager.transition(ctx.view());
+            GuiManager.open(player, create(player));
+        });
+    }
+
+    private static GuiButton buildShowTooltipsToggle(Player player) {
+        PlayerSettings settings = UserManager.get(player.getUniqueId());
+        boolean enabled = settings.showTooltips.get();
+        ItemStack item = new ItemStack(Material.OAK_SIGN);
+        item.editMeta(m -> {
+            m.displayName(TextUtil.parse("<!italic><gold>Show Control Tooltips"));
+            m.lore(Arrays.asList(
+                TextUtil.parse("<!italic><gray>Status: " + (enabled ? "<green>Enabled</green>" : "<red>Disabled</red>")),
+                TextUtil.parse("<!italic><dark_gray>Click to toggle")
+            ));
+        });
+        return new GuiButton(item, ctx -> {
+            settings.showTooltips.set(!enabled);
             settings.config.save();
             InventoryBackupManager.transition(ctx.view());
             GuiManager.open(player, create(player));

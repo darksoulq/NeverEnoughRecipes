@@ -37,7 +37,7 @@ import java.util.*;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RecipeViewer {
-    public enum Type { RECIPE, USE }
+    public enum Type { RECIPE, USE, CATALYST }
 
     private static final int[] PROVIDER_SLOTS = {
         9, 10, 11, 12, 13, 14, 15, 16, 17,
@@ -70,7 +70,20 @@ public class RecipeViewer {
     }
 
     public static Gui create(Player player, ItemStack target, Type type, int categoryOffset, int recipePage, int subPage, int stageIndex, int stagePage, int providerPage) {
-        final List<ParsedRecipeView> allRecipes = type == Type.RECIPE ? RecipeManager.getRecipes(target) : RecipeManager.getUses(target);
+        final List<ParsedRecipeView> allRecipes;
+        if (type == Type.RECIPE) {
+            allRecipes = RecipeManager.getRecipes(target);
+        } else if (type == Type.USE) {
+            allRecipes = RecipeManager.getUses(target);
+        } else {
+            allRecipes = new ArrayList<>();
+            for (ParsedRecipeView v : RecipeManager.getAllRecipes()) {
+                if (v.provider() != null && v.provider().isSimilar(target)) {
+                    allRecipes.add(v);
+                }
+            }
+        }
+
         if (allRecipes.isEmpty()) return MainMenu.create(player);
 
         final Map<ItemStack, List<ParsedRecipeView>> grouped = new LinkedHashMap<>();
@@ -94,7 +107,7 @@ public class RecipeViewer {
                 Placeholder.parsed("offset", TextOffset.getOffsetMinimessage(activeStage.offset())),
                 Placeholder.parsed("texture", activeStage.texture().toMiniMessageString()),
                 Placeholder.parsed("width", TextOffset.getOffsetMinimessage(-168)),
-                Placeholder.parsed("title", type == Type.RECIPE ? "Recipes" : "Uses")))
+                Placeholder.parsed("title", type == Type.RECIPE ? "Recipes" : (type == Type.CATALYST ? "All Recipes" : "Uses"))))
             .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
             .set(SlotPosition.top(53), new GuiButton(UiItems.CLOSE.getStack(), ctx -> GuiHistory.back(player, ctx.view())));
 
@@ -245,9 +258,29 @@ public class RecipeViewer {
                 if (index == safeCategoryOffset) {
                     display.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
                 }
+
+                PlayerSettings settings = UserManager.get(player.getUniqueId());
+                if (settings.showTooltips.get()) {
+                    List<Component> extraLore = new ArrayList<>();
+                    extraLore.add(TextUtil.parse("<!italic><dark_gray>Left Click to switch category"));
+                    extraLore.add(TextUtil.parse("<!italic><dark_gray>Right Click to view all recipes"));
+                    List<Component> lines = new ArrayList<>();
+                    if (display.hasData(DataComponentTypes.LORE)) {
+                        lines.addAll(display.getData(DataComponentTypes.LORE).lines());
+                    }
+                    lines.addAll(extraLore);
+                    display.setData(DataComponentTypes.LORE, ItemLore.lore().lines(lines).build());
+                }
+
                 return new GuiButton(display, ctx -> {
-                    InventoryBackupManager.transition(ctx.view());
-                    GuiManager.open(player, create(player, target, type, index, 0, 0, 0, 0, providerPage));
+                    if (ctx.clickType() == ClickType.RIGHT) {
+                        GuiHistory.push(player, () -> GuiManager.open(player, create(player, target, type, safeCategoryOffset, safeRecipePage, subPage, safeStageIndex, stagePage, providerPage)));
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, create(player, cat, Type.CATALYST, 0, 0, 0, 0, 0, 0));
+                    } else {
+                        InventoryBackupManager.transition(ctx.view());
+                        GuiManager.open(player, create(player, target, type, index, 0, 0, 0, 0, providerPage));
+                    }
                 });
             }
         );

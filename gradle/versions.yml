@@ -1,3 +1,7 @@
+26.3:
+  java: 21
+  paperweight: 26.3.build.+
+  apiVersion: 26.3
 26.2:
   java: 25
   paperweight: 26.2.build.+

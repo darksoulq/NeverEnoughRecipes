@@ -19,6 +19,7 @@ public class PlayerSettings {
     public final Config.Value<List<ItemStack>> recents;
     public final Config.Value<Boolean> returnToMenuOnSearchClose;
     public final Config.Value<Boolean> returnToMenuOnConfigClose;
+    public final Config.Value<Boolean> showTooltips;
 
     public PlayerSettings(UUID uuid) {
         this.config = new Config("ner", uuid.toString(), "users").schema(1).apply();
@@ -33,6 +34,7 @@ public class PlayerSettings {
         this.recents = config.value("recents", new ArrayList<>());
         this.returnToMenuOnSearchClose = config.value("return_to_menu_on_search_close", true);
         this.returnToMenuOnConfigClose = config.value("return_to_menu_on_config_close", false);
+        this.showTooltips = config.value("show_tooltips", true);
 
         config.save();
     }
