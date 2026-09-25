@@ -47,8 +47,8 @@ fun mergeMaps(global: Map<String, Any>, specific: Map<String, Any>, removals: Li
 
 val versionsMap = parseYaml(File(rootDir, "gradle/versions.yml"))
 val activeConfig = (versionsMap[mcVersion] as? Map<*, *>)
-    ?: (versionsMap["26.2"] as? Map<*, *>)
-    ?: mapOf("java" to 25, "paperweight" to "26.2.build.+", "apiVersion" to "26.2")
+    ?: (versionsMap["26.3"] as? Map<*, *>)
+    ?: mapOf("java" to 25, "paperweight" to "26.3.build.+", "apiVersion" to "26.3")
 
 val targetJavaVersion = activeConfig["java"]?.toString()?.toIntOrNull() ?: 25
 val paperweightStr = activeConfig["paperweight"]?.toString()?.replace("{version}", mcVersion) ?: ""

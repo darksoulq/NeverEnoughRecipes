@@ -1,0 +1,1 @@
+com/github/darksoulq/ner/layout/impl/BrewingCategory

@@ -18,6 +18,7 @@ public class Pack {
     public static Font.TextureGlyph BREWING;
     public static Font.TextureGlyph STONE_CUTTER;
     public static Font.TextureGlyph SMITHING;
+    public static Font.TextureGlyph TRADING;
 
     public static void init(NeverEnoughRecipes pl) {
         ResourcePack pack = new ResourcePack(pl, "ner");
@@ -33,6 +34,7 @@ public class Pack {
         Texture brewTex = ns.texture("gui/brewing");
         Texture stoneTex = ns.texture("gui/stone_cutter");
         Texture smithTex = ns.texture("gui/smithing");
+        Texture tradingTex = ns.texture("gui/trading");
 
         Font fn = ns.font("gui", false);
         MAIN_MENU = fn.glyph(mainTex, 222, 13);
@@ -43,6 +45,7 @@ public class Pack {
         BREWING = fn.glyph(brewTex, 222, 13);
         STONE_CUTTER = fn.glyph(stoneTex, 222, 13);
         SMITHING = fn.glyph(smithTex, 222, 13);
+        TRADING = fn.glyph(tradingTex, 222, 13);
 
         createItemDef(ns, "forward");
         createItemDef(ns, "backward");

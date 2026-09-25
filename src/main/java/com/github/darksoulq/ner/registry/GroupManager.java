@@ -22,13 +22,13 @@ public class GroupManager {
 
     public static void addGroup(ItemGroup group) {
         for (ItemStack item : group.items()) {
-            ITEMSTACK_TO_GROUP.put(item, group);
+            ITEMSTACK_TO_GROUP.put(IngredientManager.deduplicate(item.asOne()), group);
         }
     }
 
     public static ItemGroup getGroup(ItemStack item) {
         if (item == null || item.isEmpty()) return null;
-        return ITEMSTACK_TO_GROUP.get(item);
+        return ITEMSTACK_TO_GROUP.get(IngredientManager.deduplicate(item.asOne()));
     }
 
     public static List<GuiEntry> buildEntries(Player player, Set<String> expandedGroups) {

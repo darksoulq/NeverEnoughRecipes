@@ -1,17 +1,26 @@
 package com.github.darksoulq.ner.plugin;
 
 import com.github.darksoulq.abyssallib.common.util.Either;
+import com.github.darksoulq.abyssallib.common.util.TextUtil;
 import com.github.darksoulq.abyssallib.server.registry.Registries;
 import com.github.darksoulq.abyssallib.world.data.tag.Tag;
 import com.github.darksoulq.abyssallib.world.data.tag.impl.ItemTag;
-import com.github.darksoulq.ner.layout.impl.*;
+import com.github.darksoulq.ner.layout.impl.BrewingCategory;
+import com.github.darksoulq.ner.layout.impl.CookingCategory;
+import com.github.darksoulq.ner.layout.impl.ShapedCategory;
+import com.github.darksoulq.ner.layout.impl.ShapelessCategory;
+import com.github.darksoulq.ner.layout.impl.SmithingTransformCategory;
+import com.github.darksoulq.ner.layout.impl.StonecuttingCategory;
+import com.github.darksoulq.ner.layout.impl.TransmuteCategory;
+import com.github.darksoulq.ner.layout.impl.VillagerTradesCategory;
+import com.github.darksoulq.ner.model.VillagerTradeRecipe;
 import com.github.darksoulq.ner.registry.IngredientManager;
 import com.github.darksoulq.ner.registry.RecipeManager;
 import com.github.darksoulq.ner.util.CraftabilityUtil;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ItemLore;
-import io.papermc.paper.potion.PotionMix;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,16 +28,16 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.item.CreativeModeTab;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Registry;
+import org.bukkit.World;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.entity.Villager;
+import org.bukkit.entity.WanderingTrader;
 import org.bukkit.inventory.*;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class VanillaNerPlugin implements NerPlugin {
 
@@ -52,7 +61,7 @@ public class VanillaNerPlugin implements NerPlugin {
                     if (tab.getType() == CreativeModeTab.Type.CATEGORY) {
                         try {
                             tab.buildContents(params);
-                            java.util.Collection<net.minecraft.world.item.ItemStack> items = tab.getDisplayItems();
+                            Collection<net.minecraft.world.item.ItemStack> items = tab.getDisplayItems();
                             for (net.minecraft.world.item.ItemStack nmsItem : items) {
                                 if (nmsItem != null && !nmsItem.isEmpty()) {
                                     Material mat = CraftItemStack.asBukkitCopy(nmsItem).getType();
@@ -82,6 +91,13 @@ public class VanillaNerPlugin implements NerPlugin {
         vanillaTagsLoaded = true;
     }
 
+    private ItemStack getProfessionIcon(Villager.Profession profession) {
+        ItemStack item = new ItemStack(Material.VILLAGER_SPAWN_EGG);
+        String nameKey = "ner.profession." + profession.key().value().toLowerCase(Locale.ROOT);
+        item.setData(DataComponentTypes.ITEM_NAME, Component.translatable(nameKey).decoration(TextDecoration.ITALIC, false));
+        return item;
+    }
+
     @Override
     public void register(Registration registry) {
         loadVanillaTags();
@@ -91,6 +107,25 @@ public class VanillaNerPlugin implements NerPlugin {
         registry.addDeduplicator(item -> {
             if (item.getType() == Material.SUSPICIOUS_STEW) {
                 return new ItemStack(Material.SUSPICIOUS_STEW);
+            }
+            return item;
+        });
+
+        registry.addDeduplicator(item -> {
+            if (item.hasData(DataComponentTypes.ENCHANTMENTS) || item.hasData(DataComponentTypes.STORED_ENCHANTMENTS)) {
+                ItemStack clone = item.clone();
+                clone.unsetData(DataComponentTypes.ENCHANTMENTS);
+                clone.unsetData(DataComponentTypes.STORED_ENCHANTMENTS);
+                return clone;
+            }
+            return item;
+        });
+
+        registry.addDeduplicator(item -> {
+            if (item.hasData(DataComponentTypes.DYED_COLOR)) {
+                ItemStack clone = item.clone();
+                clone.unsetData(DataComponentTypes.DYED_COLOR);
+                return clone;
             }
             return item;
         });
@@ -138,20 +173,19 @@ public class VanillaNerPlugin implements NerPlugin {
             return false;
         });
 
-        registry.addFilter("$", (term, item) -> !RecipeManager.getRecipes(item).stream()
+        registry.addFilter("$", (term, item) -> RecipeManager.getRecipes(item).stream()
             .filter(recipe -> recipe.provider() != null && !recipe.provider().isEmpty())
-            .filter(recipe -> {
+            .noneMatch(recipe -> {
                 Component nameComp = recipe.provider().hasData(DataComponentTypes.CUSTOM_NAME) ? recipe.provider().getData(DataComponentTypes.CUSTOM_NAME) : (recipe.provider().hasData(DataComponentTypes.ITEM_NAME) ? recipe.provider().getData(DataComponentTypes.ITEM_NAME) : Component.text(recipe.provider().getType().name()));
                 return PlainTextComponentSerializer.plainText().serialize(nameComp).toLowerCase(Locale.ROOT).contains(term);
-            })
-            .toList().isEmpty() ||
-            !RecipeManager.getUses(item).stream()
+            }) &&
+            RecipeManager.getUses(item).stream()
                 .filter(recipe -> recipe.provider() != null && !recipe.provider().isEmpty())
-                .filter(recipe -> {
+                .noneMatch(recipe -> {
                     Component nameComp = recipe.provider().hasData(DataComponentTypes.CUSTOM_NAME) ? recipe.provider().getData(DataComponentTypes.CUSTOM_NAME) : (recipe.provider().hasData(DataComponentTypes.ITEM_NAME) ? recipe.provider().getData(DataComponentTypes.ITEM_NAME) : Component.text(recipe.provider().getType().name()));
                     return PlainTextComponentSerializer.plainText().serialize(nameComp).toLowerCase(Locale.ROOT).contains(term);
                 })
-                .toList().isEmpty());
+        );
 
         List<ItemStack> beds = new ArrayList<>();
         List<ItemStack> wool = new ArrayList<>();
@@ -165,6 +199,24 @@ public class VanillaNerPlugin implements NerPlugin {
         List<ItemStack> shulkerBoxes = new ArrayList<>();
         List<ItemStack> banners = new ArrayList<>();
         List<ItemStack> candles = new ArrayList<>();
+        List<ItemStack> bundles = new ArrayList<>();
+        List<ItemStack> copperLanterns = new ArrayList<>();
+        List<ItemStack> ores = new ArrayList<>();
+        List<ItemStack> harnesses = new ArrayList<>();
+        List<ItemStack> shelves = new ArrayList<>();
+        List<ItemStack> lightningRods = new ArrayList<>();
+        List<ItemStack> copperChests = new ArrayList<>();
+        List<ItemStack> boats = new ArrayList<>();
+        List<ItemStack> chestBoats = new ArrayList<>();
+        List<ItemStack> signs = new ArrayList<>();
+        List<ItemStack> hangingSigns = new ArrayList<>();
+        //? if >=26.3 {
+        List<ItemStack> concreteSlabs = new ArrayList<>();
+        List<ItemStack> concreteStairs = new ArrayList<>();
+        List<ItemStack> woolSlabs = new ArrayList<>();
+        List<ItemStack> woolStairs = new ArrayList<>();
+        List<ItemStack> cushions = new ArrayList<>();
+        //?}
 
         for (Material mat : Material.values()) {
             if (!mat.isItem() || mat.isAir() || mat.isLegacy()) continue;
@@ -173,7 +225,7 @@ public class VanillaNerPlugin implements NerPlugin {
             else if (name.endsWith("_WOOL")) wool.add(new ItemStack(mat));
             else if (name.endsWith("_CARPET")) carpets.add(new ItemStack(mat));
             else if (name.endsWith("_GLAZED_TERRACOTTA")) glazedTerracotta.add(new ItemStack(mat));
-            else if (name.endsWith("_TERRACOTTA") && !name.equals("TERRACOTTA")) terracotta.add(new ItemStack(mat));
+            else if (name.endsWith("_TERRACOTTA")) terracotta.add(new ItemStack(mat));
             else if (name.endsWith("_CONCRETE")) concrete.add(new ItemStack(mat));
             else if (name.endsWith("_CONCRETE_POWDER")) concretePowder.add(new ItemStack(mat));
             else if (name.endsWith("_STAINED_GLASS")) stainedGlass.add(new ItemStack(mat));
@@ -181,6 +233,24 @@ public class VanillaNerPlugin implements NerPlugin {
             else if (name.endsWith("_SHULKER_BOX")) shulkerBoxes.add(new ItemStack(mat));
             else if (name.endsWith("_BANNER") && !name.contains("PATTERN") && !name.contains("WALL")) banners.add(new ItemStack(mat));
             else if (name.endsWith("_CANDLE")) candles.add(new ItemStack(mat));
+            else if (name.endsWith("_BUNDLE")) bundles.add(new ItemStack(mat));
+            else if (name.endsWith("_COPPER_LANTERN")) copperLanterns.add(new ItemStack(mat));
+            else if (name.endsWith("_ORE")) ores.add(new ItemStack(mat));
+            else if (name.endsWith("_HARNESS")) harnesses.add(new ItemStack(mat));
+            else if (name.endsWith("_SHELF")) shelves.add(new ItemStack(mat));
+            else if (name.endsWith("_LIGHTNING_ROD")) lightningRods.add(new ItemStack(mat));
+            else if (name.endsWith("_COPPER_CHEST")) copperChests.add(new ItemStack(mat));
+            else if ((name.endsWith("_BOAT") || mat.equals(Material.BAMBOO_RAFT)) && !name.contains("CHEST")) boats.add(new ItemStack(mat));
+            else if (name.endsWith("_CHEST_BOAT") || mat.equals(Material.BAMBOO_CHEST_RAFT)) chestBoats.add(new ItemStack(mat));
+            else if (name.endsWith("_SIGN") && !name.contains("HANGING")) signs.add(new ItemStack(mat));
+            else if (name.endsWith("_HANGING_SIGN")) hangingSigns.add(new ItemStack(mat));
+            //? if >=26.3 {
+            else if (name.endsWith("_CONCRETE_SLAB")) concreteSlabs.add(new ItemStack(mat));
+            else if (name.endsWith("_CONCRETE_STAIRS")) concreteStairs.add(new ItemStack(mat));
+            else if (name.endsWith("_WOOL_SLAB")) woolSlabs.add(new ItemStack(mat));
+            else if (name.endsWith("_WOOL_STAIRS")) woolStairs.add(new ItemStack(mat));
+            else if (name.endsWith("_CUSHION")) cushions.add(new ItemStack(mat));
+            //?}
         }
 
         Comparator<ItemStack> creativeSorter = Comparator.comparingInt(a -> getCreativeOrder(a.getType()));
@@ -196,6 +266,24 @@ public class VanillaNerPlugin implements NerPlugin {
         shulkerBoxes.sort(creativeSorter);
         banners.sort(creativeSorter);
         candles.sort(creativeSorter);
+        bundles.sort(creativeSorter);
+        copperLanterns.sort(creativeSorter);
+        ores.sort(creativeSorter);
+        harnesses.sort(creativeSorter);
+        shelves.sort(creativeSorter);
+        lightningRods.sort(creativeSorter);
+        copperChests.sort(creativeSorter);
+        boats.sort(creativeSorter);
+        chestBoats.sort(creativeSorter);
+        signs.sort(creativeSorter);
+        hangingSigns.sort(creativeSorter);
+        //? if >=26.3 {
+        concreteSlabs.sort(creativeSorter);
+        concreteStairs.sort(creativeSorter);
+        woolSlabs.sort(creativeSorter);
+        woolStairs.sort(creativeSorter);
+        cushions.sort(creativeSorter);
+        //?}
 
         registry.addItemGroup("beds", Component.text("Beds"), beds, true);
         registry.addItemGroup("wool", Component.text("Wool"), wool, true);
@@ -209,6 +297,24 @@ public class VanillaNerPlugin implements NerPlugin {
         registry.addItemGroup("shulker_boxes", Component.text("Shulker Boxes"), shulkerBoxes, true);
         registry.addItemGroup("banners", Component.text("Banners"), banners, true);
         registry.addItemGroup("candles", Component.text("Candles"), candles, true);
+        registry.addItemGroup("bundles", Component.text("Bundles"), bundles, true);
+        registry.addItemGroup("copper_lanterns", Component.text("Copper Lanterns"), copperLanterns, true);
+        registry.addItemGroup("ores", Component.text("Ores"), ores, true);
+        registry.addItemGroup("harness", Component.text("Harnesses"), harnesses, true);
+        registry.addItemGroup("shelf", Component.text("Shelves"), shelves, true);
+        registry.addItemGroup("lightning_rods", Component.text("Lightning Rods"), lightningRods, true);
+        registry.addItemGroup("copper_chests", Component.text("Copper Chests"), copperChests, true);
+        registry.addItemGroup("boats", Component.text("Boats"), boats, true);
+        registry.addItemGroup("chest_boats", Component.text("Chest Boats"), chestBoats, true);
+        registry.addItemGroup("signs", Component.text("Signs"), signs, true);
+        registry.addItemGroup("hanging_signs", Component.text("Hanging Signs"), hangingSigns, true);
+        //? if >=26.3 {
+        registry.addItemGroup("concrete_slabs", Component.text("Concrete Slabs"), concreteSlabs, true);
+        registry.addItemGroup("concrete_stairs", Component.text("Concrete Stairs"), concreteStairs, true);
+        registry.addItemGroup("wool_slabs", Component.text("Wool Slabs"), woolSlabs, true);
+        registry.addItemGroup("wool_stairs", Component.text("Wool Stairs"), woolStairs, true);
+        registry.addItemGroup("cushions", Component.text("Cushions"), cushions, true);
+        //?}
 
         registry.addCategory(new ShapedCategory());
         registry.addCatalyst(ShapedRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
@@ -237,8 +343,15 @@ public class VanillaNerPlugin implements NerPlugin {
         registry.addCategory(new StonecuttingCategory());
         registry.addCatalyst(StonecuttingRecipe.class, new ItemStack(Material.STONECUTTER));
 
+        //? if >=26.3 {
         registry.addCategory(new BrewingCategory());
-        registry.addCatalyst(PotionMix.class, new ItemStack(Material.BREWING_STAND));
+        registry.addCatalyst(BrewingRecipe.class, new ItemStack(Material.BREWING_STAND));
+        //?}
+
+        registry.addCategory(new VillagerTradesCategory());
+        ItemStack tradingIcon = new ItemStack(Material.EMERALD);
+        tradingIcon.setData(DataComponentTypes.ITEM_NAME, Component.text("Trading"));
+        registry.addCatalyst(VillagerTradeRecipe.class, tradingIcon);
 
         registry.addCraftabilityChecker(ShapedRecipe.class, (player, recipe) -> {
             List<RecipeChoice> choices = new ArrayList<>();
@@ -275,9 +388,83 @@ public class VanillaNerPlugin implements NerPlugin {
         registry.addCraftabilityChecker(StonecuttingRecipe.class, (player, recipe) ->
             CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
 
-        registry.addCraftabilityChecker(PotionMix.class, (player, recipe) ->
+        //? if >=26.3 {
+        registry.addCraftabilityChecker(BrewingRecipe.class, (player, recipe) ->
             CraftabilityUtil.hasIngredients(player, List.of(recipe.getInput(), recipe.getIngredient())));
+        //?}
+
+        registry.addCraftabilityChecker(VillagerTradeRecipe.class, (player, trade) -> {
+            List<RecipeChoice> choices = new ArrayList<>();
+            for (ItemStack item : trade.recipe().getIngredients()) {
+                if (item != null && !item.isEmpty()) {
+                    choices.add(RecipeChoice.exactChoice(item));
+                }
+            }
+            return CraftabilityUtil.hasIngredients(player, choices);
+        });
 
         Bukkit.recipeIterator().forEachRemaining(registry::addRecipe);
+
+        if (!Bukkit.getWorlds().isEmpty()) {
+            World world = Bukkit.getWorlds().getFirst();
+            Location loc = world.getSpawnLocation();
+            Set<String> seenTrades = new HashSet<>();
+
+            for (Villager.Profession profession : Registry.VILLAGER_PROFESSION) {
+                if (profession == Villager.Profession.NONE) continue;
+
+                for (int level = 1; level <= 5; level++) {
+                    for (int i = 0; i < 20; i++) {
+                        int finalLevel = level;
+                        Villager v = world.spawn(loc, Villager.class, villager -> {
+                            villager.setProfession(profession);
+                            villager.setVillagerLevel(finalLevel);
+                            villager.setAI(false);
+                            villager.setSilent(true);
+                            villager.setCollidable(false);
+                            villager.setGravity(false);
+                        });
+
+                        for (MerchantRecipe recipe : v.getRecipes()) {
+                            List<String> ingredients = new ArrayList<>();
+                            for (ItemStack ing : recipe.getIngredients()) {
+                                if (ing != null) ingredients.add(ing.getType().name() + ":" + ing.getAmount());
+                            }
+                            String hash = recipe.getResult().getType().name() + ":" + recipe.getResult().getAmount() + "-" + String.join(",", ingredients);
+                            if (seenTrades.add(hash)) {
+                                registry.addRecipe(new VillagerTradeRecipe(recipe, getProfessionIcon(profession)));
+                            }
+                        }
+
+                        v.remove();
+                    }
+                }
+            }
+
+            ItemStack wtIcon = new ItemStack(Material.WANDERING_TRADER_SPAWN_EGG);
+            wtIcon.setData(DataComponentTypes.ITEM_NAME, Component.translatable("ner.profession.wandering_trader").decoration(TextDecoration.ITALIC, false));
+
+            for (int i = 0; i < 20; i++) {
+                WanderingTrader wt = world.spawn(loc, WanderingTrader.class, trader -> {
+                    trader.setAI(false);
+                    trader.setSilent(true);
+                    trader.setCollidable(false);
+                    trader.setGravity(false);
+                });
+
+                for (MerchantRecipe recipe : wt.getRecipes()) {
+                    List<String> ingredients = new ArrayList<>();
+                    for (ItemStack ing : recipe.getIngredients()) {
+                        if (ing != null) ingredients.add(ing.getType().name() + ":" + ing.getAmount());
+                    }
+                    String hash = recipe.getResult().getType().name() + ":" + recipe.getResult().getAmount() + "-" + String.join(",", ingredients);
+                    if (seenTrades.add(hash)) {
+                        registry.addRecipe(new VillagerTradeRecipe(recipe, wtIcon.clone()));
+                    }
+                }
+
+                wt.remove();
+            }
+        }
     }
 }

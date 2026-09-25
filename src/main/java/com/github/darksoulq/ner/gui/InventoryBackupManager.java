@@ -46,4 +46,8 @@ public class InventoryBackupManager {
     public static ItemStack[] getBackup(UUID uuid) {
         return BACKUPS.get(uuid);
     }
+
+    public static void remove(UUID uuid) {
+        BACKUPS.remove(uuid);
+    }
 }

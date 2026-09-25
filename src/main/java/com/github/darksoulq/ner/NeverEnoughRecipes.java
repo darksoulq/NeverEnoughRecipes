@@ -4,6 +4,9 @@ import com.github.darksoulq.abyssallib.server.command.CommandBus;
 import com.github.darksoulq.abyssallib.server.event.EventBus;
 import com.github.darksoulq.abyssallib.server.scheduler.Clock;
 import com.github.darksoulq.abyssallib.server.scheduler.Scheduler;
+import com.github.darksoulq.abyssallib.server.translation.ServerTranslator;
+import com.github.darksoulq.abyssallib.server.translation.internal.CustomTranslator;
+import com.github.darksoulq.abyssallib.server.translation.internal.LanguageLoader;
 import com.github.darksoulq.abyssallib.server.util.UpdateChecker;
 import com.github.darksoulq.ner.data.Events;
 import com.github.darksoulq.ner.data.InternalCommands;
@@ -20,6 +23,8 @@ import com.github.darksoulq.ner.resources.PluginPermissions;
 import com.github.darksoulq.ner.resources.UiItems;
 import dev.faststats.bukkit.BukkitMetrics;
 import dev.faststats.core.ErrorTracker;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.translation.GlobalTranslator;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -31,6 +36,7 @@ public final class NeverEnoughRecipes extends JavaPlugin {
     public static Scheduler SCHEDULER;
     public static final String PLUGIN_ID = "ner";
     private static final List<NerPlugin> PLUGINS = new ArrayList<>();
+    public static CustomTranslator TRANSLATOR;
 
     public static final ErrorTracker ERROR_TRACKER = ErrorTracker.contextAware();
     private static final BukkitMetrics.Factory METRICS = BukkitMetrics.factory()
@@ -42,6 +48,8 @@ public final class NeverEnoughRecipes extends JavaPlugin {
         INSTANCE = this;
         CONFIG = new PluginConfig();
         SCHEDULER = new Scheduler(this);
+
+        ServerTranslator.loadResource(this, "lang/en_us.properties");
 
         Pack.init(this);
         UiItems.ITEMS.apply();

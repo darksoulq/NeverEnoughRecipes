@@ -4,6 +4,7 @@ import com.github.darksoulq.abyssallib.server.event.SubscribeEvent;
 import com.github.darksoulq.abyssallib.world.gui.GuiManager;
 import com.github.darksoulq.abyssallib.world.item.Item;
 import com.github.darksoulq.ner.NeverEnoughRecipes;
+import com.github.darksoulq.ner.gui.GuiHistory;
 import com.github.darksoulq.ner.gui.InventoryBackupManager;
 import com.github.darksoulq.ner.gui.MainMenu;
 import com.github.darksoulq.ner.resources.PluginPermissions;
@@ -12,6 +13,9 @@ import com.github.darksoulq.ner.user.UserManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+
+import java.util.UUID;
 
 public class Events {
     @SubscribeEvent
@@ -21,6 +25,14 @@ public class Events {
         Player player = event.getPlayer();
         if (player.hasPlayedBefore()) return;
         player.getInventory().addItem(UiItems.DEFAULT_BOOK.getStack().clone());
+    }
+
+    @SubscribeEvent
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        UserManager.remove(uuid);
+        GuiHistory.clear(event.getPlayer());
+        InventoryBackupManager.remove(uuid);
     }
 
     @SubscribeEvent

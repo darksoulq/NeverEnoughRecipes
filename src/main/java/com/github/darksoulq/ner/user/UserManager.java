@@ -10,4 +10,8 @@ public class UserManager {
     public static PlayerSettings get(UUID uuid) {
         return SETTINGS.computeIfAbsent(uuid, PlayerSettings::new);
     }
+
+    public static void remove(UUID uuid) {
+        SETTINGS.remove(uuid);
+    }
 }
