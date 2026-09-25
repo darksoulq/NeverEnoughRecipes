@@ -1,11 +1,11 @@
 package com.github.darksoulq.ner.plugin;
 
-import com.github.darksoulq.abyssallib.common.util.Either;
-import com.github.darksoulq.abyssallib.common.util.TextUtil;
 import com.github.darksoulq.abyssallib.server.registry.Registries;
 import com.github.darksoulq.abyssallib.world.data.tag.Tag;
 import com.github.darksoulq.abyssallib.world.data.tag.impl.ItemTag;
+//? >=26.3 {
 import com.github.darksoulq.ner.layout.impl.BrewingCategory;
+//?}
 import com.github.darksoulq.ner.layout.impl.CookingCategory;
 import com.github.darksoulq.ner.layout.impl.ShapedCategory;
 import com.github.darksoulq.ner.layout.impl.ShapelessCategory;
@@ -397,7 +397,7 @@ public class VanillaNerPlugin implements NerPlugin {
             List<RecipeChoice> choices = new ArrayList<>();
             for (ItemStack item : trade.recipe().getIngredients()) {
                 if (item != null && !item.isEmpty()) {
-                    choices.add(RecipeChoice.exactChoice(item));
+                    choices.add(new RecipeChoice.ExactChoice(item));
                 }
             }
             return CraftabilityUtil.hasIngredients(player, choices);

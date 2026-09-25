@@ -1,1 +1,1 @@
-com/github/darksoulq/ner/layout/impl/BrewingCategory
+com/github/darksoulq/ner/layout/impl/BrewingCategory.java
