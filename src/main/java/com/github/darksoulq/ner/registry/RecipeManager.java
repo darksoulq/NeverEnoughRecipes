@@ -115,7 +115,6 @@ public class RecipeManager {
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     public static boolean isCraftable(Player player, ItemStack item) {
         List<ParsedRecipeView> recipes = getRecipes(item);
         if (recipes.isEmpty()) return false;
@@ -165,14 +164,19 @@ public class RecipeManager {
         RECIPE_TO_CATEGORY.clear();
         ALL_COMPILED_VIEWS.clear();
 
+        Map<Class<?>, RecipeCategory<?>> categoryLookupCache = new HashMap<>();
+
         for (Object recipe : RAW_RECIPES) {
-            RecipeCategory<?> rawCat = null;
-            for (Map.Entry<Class<?>, RecipeCategory<?>> entry : CATEGORIES.entrySet()) {
-                if (entry.getKey().isAssignableFrom(recipe.getClass())) {
-                    rawCat = entry.getValue();
-                    break;
+            Class<?> recipeClass = recipe.getClass();
+            RecipeCategory<?> rawCat = categoryLookupCache.computeIfAbsent(recipeClass, cls -> {
+                for (Map.Entry<Class<?>, RecipeCategory<?>> entry : CATEGORIES.entrySet()) {
+                    if (entry.getKey().isAssignableFrom(cls)) {
+                        return entry.getValue();
+                    }
                 }
-            }
+                return null;
+            });
+
             if (rawCat == null) continue;
 
             RecipeCategory<Object> category = (RecipeCategory<Object>) rawCat;
@@ -181,49 +185,14 @@ public class RecipeManager {
             ParsedRecipeView parsed = category.parseRecipe(recipe, catalyst);
             if (parsed == null) continue;
 
+            Set<Integer> results = category.getResultSlots();
+            if (hasHiddenResult(parsed, results)) continue;
+
             VIEW_TO_RECIPE.put(parsed, recipe);
             RECIPE_TO_CATEGORY.put(recipe, rawCat);
-
-            Set<Integer> results = category.getResultSlots();
-            Set<Integer> ignored = category.getIgnoredSlots();
-
-            boolean producesHidden = false;
-
-            for (RecipeStage stage : parsed.stages()) {
-                for (Map.Entry<Integer, List<ItemStack>> entry : stage.slots().entrySet()) {
-                    if (results.contains(entry.getKey())) {
-                        for (ItemStack item : entry.getValue()) {
-                            if (IngredientManager.isHidden(item)) {
-                                producesHidden = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (producesHidden) break;
-                }
-
-                if (!producesHidden) {
-                    for (PagedSection section : stage.pagedSections()) {
-                        if (section.slots() != null && section.slots().length > 0) {
-                            int firstSlot = section.slots()[0];
-                            if (results.contains(firstSlot)) {
-                                for (ItemStack item : section.items()) {
-                                    if (IngredientManager.isHidden(item)) {
-                                        producesHidden = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (producesHidden) break;
-                    }
-                }
-                if (producesHidden) break;
-            }
-
-            if (producesHidden) continue;
-
             ALL_COMPILED_VIEWS.add(parsed);
+
+            Set<Integer> ignored = category.getIgnoredSlots();
 
             for (RecipeStage stage : parsed.stages()) {
                 processItems(stage.slots(), results, ignored, parsed);
@@ -235,6 +204,33 @@ public class RecipeManager {
                 }
             }
         }
+    }
+
+    private static boolean hasHiddenResult(ParsedRecipeView parsed, Set<Integer> results) {
+        for (RecipeStage stage : parsed.stages()) {
+            for (Map.Entry<Integer, List<ItemStack>> entry : stage.slots().entrySet()) {
+                if (results.contains(entry.getKey())) {
+                    for (ItemStack item : entry.getValue()) {
+                        if (IngredientManager.isHidden(item)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            for (PagedSection section : stage.pagedSections()) {
+                if (section.slots() != null && section.slots().length > 0) {
+                    if (results.contains(section.slots()[0])) {
+                        for (ItemStack item : section.items()) {
+                            if (IngredientManager.isHidden(item)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private static void processItems(Map<Integer, List<ItemStack>> slots, Set<Integer> results, Set<Integer> ignored, ParsedRecipeView parsed) {

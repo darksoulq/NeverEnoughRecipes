@@ -3,9 +3,10 @@ package com.github.darksoulq.ner.plugin;
 import com.github.darksoulq.abyssallib.server.registry.Registries;
 import com.github.darksoulq.abyssallib.world.data.tag.Tag;
 import com.github.darksoulq.abyssallib.world.data.tag.impl.ItemTag;
+import com.github.darksoulq.ner.data.PluginConfig;
 //? >=26.3 {
-import com.github.darksoulq.ner.layout.impl.BrewingCategory;
-//?}
+/*import com.github.darksoulq.ner.layout.impl.BrewingCategory;
+*///?}
 import com.github.darksoulq.ner.layout.impl.CookingCategory;
 import com.github.darksoulq.ner.layout.impl.ShapedCategory;
 import com.github.darksoulq.ner.layout.impl.ShapelessCategory;
@@ -25,13 +26,18 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+//? >=26.2 {
+import net.minecraft.world.entity.EntityTypes;
+//?} else
+//import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.item.CreativeModeTab;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Registry;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.WanderingTrader;
@@ -46,6 +52,15 @@ public class VanillaNerPlugin implements NerPlugin {
 
     private static final Map<Material, String> VANILLA_TAGS = new EnumMap<>(Material.class);
     private static boolean vanillaTagsLoaded = false;
+
+    private static final int MIN_VILLAGER_LEVEL = 1;
+    private static final int MAX_VILLAGER_LEVEL = 5;
+
+    private static final int DEFAULT_TRADE_ITERATIONS = 30;
+    private static final int LIBRARIAN_TRADE_ITERATIONS = 100;
+    private static final int GEAR_TRADE_ITERATIONS = 50;
+    private static final int CARTOGRAPHER_TRADE_ITERATIONS = 5;
+    private static final int WANDERING_TRADER_ITERATIONS = 200;
 
     private static int getCreativeOrder(Material material) {
         if (!creativeOrderInitialized) {
@@ -100,6 +115,7 @@ public class VanillaNerPlugin implements NerPlugin {
 
     @Override
     public void register(Registration registry) {
+        PluginConfig config = new PluginConfig();
         loadVanillaTags();
 
         registry.addNestedFilter("-", inner -> item -> !inner.test(item));
@@ -210,15 +226,15 @@ public class VanillaNerPlugin implements NerPlugin {
         List<ItemStack> chestBoats = new ArrayList<>();
         List<ItemStack> signs = new ArrayList<>();
         List<ItemStack> hangingSigns = new ArrayList<>();
-        //? if >=26.3 {
-        List<ItemStack> concreteSlabs = new ArrayList<>();
+        //? >=26.3 {
+        /*List<ItemStack> concreteSlabs = new ArrayList<>();
         List<ItemStack> concreteStairs = new ArrayList<>();
         List<ItemStack> woolSlabs = new ArrayList<>();
         List<ItemStack> woolStairs = new ArrayList<>();
         List<ItemStack> cushions = new ArrayList<>();
-        //?}
+        *///?}
 
-        for (Material mat : Material.values()) {
+        for (Material mat : Registry.MATERIAL) {
             if (!mat.isItem() || mat.isAir() || mat.isLegacy()) continue;
             String name = mat.name();
             if (name.endsWith("_BED")) beds.add(new ItemStack(mat));
@@ -244,13 +260,13 @@ public class VanillaNerPlugin implements NerPlugin {
             else if (name.endsWith("_CHEST_BOAT") || mat.equals(Material.BAMBOO_CHEST_RAFT)) chestBoats.add(new ItemStack(mat));
             else if (name.endsWith("_SIGN") && !name.contains("HANGING")) signs.add(new ItemStack(mat));
             else if (name.endsWith("_HANGING_SIGN")) hangingSigns.add(new ItemStack(mat));
-            //? if >=26.3 {
-            else if (name.endsWith("_CONCRETE_SLAB")) concreteSlabs.add(new ItemStack(mat));
+                //? >=26.3 {
+            /*else if (name.endsWith("_CONCRETE_SLAB")) concreteSlabs.add(new ItemStack(mat));
             else if (name.endsWith("_CONCRETE_STAIRS")) concreteStairs.add(new ItemStack(mat));
             else if (name.endsWith("_WOOL_SLAB")) woolSlabs.add(new ItemStack(mat));
             else if (name.endsWith("_WOOL_STAIRS")) woolStairs.add(new ItemStack(mat));
             else if (name.endsWith("_CUSHION")) cushions.add(new ItemStack(mat));
-            //?}
+            *///?}
         }
 
         Comparator<ItemStack> creativeSorter = Comparator.comparingInt(a -> getCreativeOrder(a.getType()));
@@ -277,13 +293,13 @@ public class VanillaNerPlugin implements NerPlugin {
         chestBoats.sort(creativeSorter);
         signs.sort(creativeSorter);
         hangingSigns.sort(creativeSorter);
-        //? if >=26.3 {
-        concreteSlabs.sort(creativeSorter);
+        //? >=26.3 {
+        /*concreteSlabs.sort(creativeSorter);
         concreteStairs.sort(creativeSorter);
         woolSlabs.sort(creativeSorter);
         woolStairs.sort(creativeSorter);
         cushions.sort(creativeSorter);
-        //?}
+        *///?}
 
         registry.addItemGroup("beds", Component.text("Beds"), beds, true);
         registry.addItemGroup("wool", Component.text("Wool"), wool, true);
@@ -308,162 +324,213 @@ public class VanillaNerPlugin implements NerPlugin {
         registry.addItemGroup("chest_boats", Component.text("Chest Boats"), chestBoats, true);
         registry.addItemGroup("signs", Component.text("Signs"), signs, true);
         registry.addItemGroup("hanging_signs", Component.text("Hanging Signs"), hangingSigns, true);
-        //? if >=26.3 {
-        registry.addItemGroup("concrete_slabs", Component.text("Concrete Slabs"), concreteSlabs, true);
+        //? >=26.3 {
+        /*registry.addItemGroup("concrete_slabs", Component.text("Concrete Slabs"), concreteSlabs, true);
         registry.addItemGroup("concrete_stairs", Component.text("Concrete Stairs"), concreteStairs, true);
         registry.addItemGroup("wool_slabs", Component.text("Wool Slabs"), woolSlabs, true);
         registry.addItemGroup("wool_stairs", Component.text("Wool Stairs"), woolStairs, true);
         registry.addItemGroup("cushions", Component.text("Cushions"), cushions, true);
-        //?}
+        *///?}
 
-        registry.addCategory(new ShapedCategory());
-        registry.addCatalyst(ShapedRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
+        if (config.enableCrafting.get()) {
+            registry.addCategory(new ShapedCategory());
+            registry.addCatalyst(ShapedRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
 
-        registry.addCategory(new ShapelessCategory());
-        registry.addCatalyst(ShapelessRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
+            registry.addCategory(new ShapelessCategory());
+            registry.addCatalyst(ShapelessRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
 
-        registry.addCategory(new TransmuteCategory());
-        registry.addCatalyst(TransmuteRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
+            registry.addCategory(new TransmuteCategory());
+            registry.addCatalyst(TransmuteRecipe.class, new ItemStack(Material.CRAFTING_TABLE));
 
-        registry.addCategory(new CookingCategory<>(FurnaceRecipe.class));
-        registry.addCatalyst(FurnaceRecipe.class, new ItemStack(Material.FURNACE));
-
-        registry.addCategory(new CookingCategory<>(BlastingRecipe.class));
-        registry.addCatalyst(BlastingRecipe.class, new ItemStack(Material.BLAST_FURNACE));
-
-        registry.addCategory(new CookingCategory<>(SmokingRecipe.class));
-        registry.addCatalyst(SmokingRecipe.class, new ItemStack(Material.SMOKER));
-
-        registry.addCategory(new CookingCategory<>(CampfireRecipe.class));
-        registry.addCatalyst(CampfireRecipe.class, new ItemStack(Material.CAMPFIRE));
-
-        registry.addCategory(new SmithingTransformCategory());
-        registry.addCatalyst(SmithingTransformRecipe.class, new ItemStack(Material.SMITHING_TABLE));
-
-        registry.addCategory(new StonecuttingCategory());
-        registry.addCatalyst(StonecuttingRecipe.class, new ItemStack(Material.STONECUTTER));
-
-        //? if >=26.3 {
-        registry.addCategory(new BrewingCategory());
-        registry.addCatalyst(BrewingRecipe.class, new ItemStack(Material.BREWING_STAND));
-        //?}
-
-        registry.addCategory(new VillagerTradesCategory());
-        ItemStack tradingIcon = new ItemStack(Material.EMERALD);
-        tradingIcon.setData(DataComponentTypes.ITEM_NAME, Component.text("Trading"));
-        registry.addCatalyst(VillagerTradeRecipe.class, tradingIcon);
-
-        registry.addCraftabilityChecker(ShapedRecipe.class, (player, recipe) -> {
-            List<RecipeChoice> choices = new ArrayList<>();
-            for (String row : recipe.getShape()) {
-                for (char c : row.toCharArray()) {
-                    RecipeChoice choice = recipe.getChoiceMap().get(c);
-                    if (choice != null) choices.add(choice);
+            registry.addCraftabilityChecker(ShapedRecipe.class, (player, recipe) -> {
+                List<RecipeChoice> choices = new ArrayList<>();
+                for (String row : recipe.getShape()) {
+                    for (char c : row.toCharArray()) {
+                        RecipeChoice choice = recipe.getChoiceMap().get(c);
+                        if (choice != null) choices.add(choice);
+                    }
                 }
-            }
-            return CraftabilityUtil.hasIngredients(player, choices);
+                return CraftabilityUtil.hasIngredients(player, choices);
+            });
+
+            registry.addCraftabilityChecker(ShapelessRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, recipe.getChoiceList()));
+
+            registry.addCraftabilityChecker(TransmuteRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInput(), recipe.getMaterial())));
+        }
+
+        if (config.enableSmelting.get()) {
+            registry.addCategory(new CookingCategory<>(FurnaceRecipe.class));
+            registry.addCatalyst(FurnaceRecipe.class, new ItemStack(Material.FURNACE));
+            registry.addCraftabilityChecker(FurnaceRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
+        }
+
+        if (config.enableBlasting.get()) {
+            registry.addCategory(new CookingCategory<>(BlastingRecipe.class));
+            registry.addCatalyst(BlastingRecipe.class, new ItemStack(Material.BLAST_FURNACE));
+            registry.addCraftabilityChecker(BlastingRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
+        }
+
+        if (config.enableSmoking.get()) {
+            registry.addCategory(new CookingCategory<>(SmokingRecipe.class));
+            registry.addCatalyst(SmokingRecipe.class, new ItemStack(Material.SMOKER));
+            registry.addCraftabilityChecker(SmokingRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
+        }
+
+        if (config.enableCampfire.get()) {
+            registry.addCategory(new CookingCategory<>(CampfireRecipe.class));
+            registry.addCatalyst(CampfireRecipe.class, new ItemStack(Material.CAMPFIRE));
+            registry.addCraftabilityChecker(CampfireRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
+        }
+
+        if (config.enableSmithing.get()) {
+            registry.addCategory(new SmithingTransformCategory());
+            registry.addCatalyst(SmithingTransformRecipe.class, new ItemStack(Material.SMITHING_TABLE));
+            registry.addCraftabilityChecker(SmithingTransformRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getTemplate(), recipe.getBase(), recipe.getAddition())));
+        }
+
+        if (config.enableStonecutting.get()) {
+            registry.addCategory(new StonecuttingCategory());
+            registry.addCatalyst(StonecuttingRecipe.class, new ItemStack(Material.STONECUTTER));
+            registry.addCraftabilityChecker(StonecuttingRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
+        }
+
+        //? >=26.3 {
+        /*if (config.enableBrewing.get()) {
+            registry.addCategory(new BrewingCategory());
+            registry.addCatalyst(BrewingRecipe.class, new ItemStack(Material.BREWING_STAND));
+            registry.addCraftabilityChecker(BrewingRecipe.class, (player, recipe) ->
+                CraftabilityUtil.hasIngredients(player, List.of(recipe.getInput(), recipe.getIngredient())));
+        }
+        *///?}
+
+        if (config.enableVillagerTrades.get() || config.enableWanderingTrader.get()) {
+            registry.addCategory(new VillagerTradesCategory());
+            ItemStack tradingIcon = new ItemStack(Material.EMERALD);
+            tradingIcon.setData(DataComponentTypes.ITEM_NAME, Component.text("Trading"));
+            registry.addCatalyst(VillagerTradeRecipe.class, tradingIcon);
+
+            registry.addCraftabilityChecker(VillagerTradeRecipe.class, (player, trade) -> {
+                List<RecipeChoice> choices = new ArrayList<>();
+                for (ItemStack item : trade.recipe().getIngredients()) {
+                    if (item != null && !item.isEmpty()) {
+                        choices.add(new RecipeChoice.ExactChoice(item));
+                    }
+                }
+                return CraftabilityUtil.hasIngredients(player, choices);
+            });
+        }
+
+        Bukkit.recipeIterator().forEachRemaining(recipe -> {
+            if (!config.enableCrafting.get() && (recipe instanceof ShapedRecipe || recipe instanceof ShapelessRecipe || recipe instanceof TransmuteRecipe)) return;
+            if (!config.enableSmelting.get() && recipe instanceof FurnaceRecipe) return;
+            if (!config.enableBlasting.get() && recipe instanceof BlastingRecipe) return;
+            if (!config.enableSmoking.get() && recipe instanceof SmokingRecipe) return;
+            if (!config.enableCampfire.get() && recipe instanceof CampfireRecipe) return;
+            if (!config.enableStonecutting.get() && recipe instanceof StonecuttingRecipe) return;
+            if (!config.enableSmithing.get() && recipe instanceof SmithingRecipe) return;
+
+            //? >=26.3 {
+            /*if (!config.enableBrewing.get() && recipe instanceof BrewingRecipe) return;
+            *///?}
+
+            registry.addRecipe(recipe);
         });
 
-        registry.addCraftabilityChecker(ShapelessRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, recipe.getChoiceList()));
-
-        registry.addCraftabilityChecker(TransmuteRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInput(), recipe.getMaterial())));
-
-        registry.addCraftabilityChecker(FurnaceRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
-
-        registry.addCraftabilityChecker(BlastingRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
-
-        registry.addCraftabilityChecker(SmokingRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
-
-        registry.addCraftabilityChecker(CampfireRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
-
-        registry.addCraftabilityChecker(SmithingTransformRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getTemplate(), recipe.getBase(), recipe.getAddition())));
-
-        registry.addCraftabilityChecker(StonecuttingRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInputChoice())));
-
-        //? if >=26.3 {
-        registry.addCraftabilityChecker(BrewingRecipe.class, (player, recipe) ->
-            CraftabilityUtil.hasIngredients(player, List.of(recipe.getInput(), recipe.getIngredient())));
-        //?}
-
-        registry.addCraftabilityChecker(VillagerTradeRecipe.class, (player, trade) -> {
-            List<RecipeChoice> choices = new ArrayList<>();
-            for (ItemStack item : trade.recipe().getIngredients()) {
-                if (item != null && !item.isEmpty()) {
-                    choices.add(new RecipeChoice.ExactChoice(item));
-                }
-            }
-            return CraftabilityUtil.hasIngredients(player, choices);
-        });
-
-        Bukkit.recipeIterator().forEachRemaining(registry::addRecipe);
-
-        if (!Bukkit.getWorlds().isEmpty()) {
-            World world = Bukkit.getWorlds().getFirst();
-            Location loc = world.getSpawnLocation();
+        if (!Bukkit.getWorlds().isEmpty() && (config.enableVillagerTrades.get() || config.enableWanderingTrader.get())) {
+            World bukkitWorld = Bukkit.getWorlds().getFirst();
+            ServerLevel serverLevel = ((CraftWorld) bukkitWorld).getHandle();
             Set<String> seenTrades = new HashSet<>();
 
-            for (Villager.Profession profession : Registry.VILLAGER_PROFESSION) {
-                if (profession == Villager.Profession.NONE) continue;
+            if (config.enableVillagerTrades.get()) {
+                for (Villager.Profession profession : Registry.VILLAGER_PROFESSION) {
+                    if (profession == Villager.Profession.NONE || profession == Villager.Profession.NITWIT) continue;
+                    if (profession == Villager.Profession.CARTOGRAPHER && !config.enableCartographerTrades.get()) continue;
 
-                for (int level = 1; level <= 5; level++) {
-                    for (int i = 0; i < 20; i++) {
-                        int finalLevel = level;
-                        Villager v = world.spawn(loc, Villager.class, villager -> {
-                            villager.setProfession(profession);
-                            villager.setVillagerLevel(finalLevel);
-                            villager.setAI(false);
-                            villager.setSilent(true);
-                            villager.setCollidable(false);
-                            villager.setGravity(false);
-                        });
+                    ItemStack icon = getProfessionIcon(profession);
 
-                        for (MerchantRecipe recipe : v.getRecipes()) {
-                            List<String> ingredients = new ArrayList<>();
-                            for (ItemStack ing : recipe.getIngredients()) {
-                                if (ing != null) ingredients.add(ing.getType().name() + ":" + ing.getAmount());
-                            }
-                            String hash = recipe.getResult().getType().name() + ":" + recipe.getResult().getAmount() + "-" + String.join(",", ingredients);
-                            if (seenTrades.add(hash)) {
-                                registry.addRecipe(new VillagerTradeRecipe(recipe, getProfessionIcon(profession)));
+                    int iterations = DEFAULT_TRADE_ITERATIONS;
+                    if (profession == Villager.Profession.LIBRARIAN) iterations = LIBRARIAN_TRADE_ITERATIONS;
+                    else if (profession == Villager.Profession.ARMORER || profession == Villager.Profession.WEAPONSMITH || profession == Villager.Profession.TOOLSMITH) iterations = GEAR_TRADE_ITERATIONS;
+                    else if (profession == Villager.Profession.LEATHERWORKER) iterations = GEAR_TRADE_ITERATIONS;
+                    else if (profession == Villager.Profession.CARTOGRAPHER) iterations = CARTOGRAPHER_TRADE_ITERATIONS;
+
+                    for (int level = MIN_VILLAGER_LEVEL; level <= MAX_VILLAGER_LEVEL; level++) {
+                        for (int i = 0; i < iterations; i++) {
+
+                            net.minecraft.world.entity.npc.villager.Villager nmsVillager =
+                            //? >=26.2 {
+                                new net.minecraft.world.entity.npc.villager.Villager(EntityTypes.VILLAGER, serverLevel);
+                            //?} else
+                            //new net.minecraft.world.entity.npc.villager.Villager(EntityType.VILLAGER, serverLevel);
+
+                            Villager v = (Villager) nmsVillager.getBukkitEntity();
+                            v.setProfession(profession);
+                            v.setVillagerLevel(level);
+
+                            for (MerchantRecipe recipe : v.getRecipes()) {
+                                List<String> ingredients = new ArrayList<>();
+                                for (ItemStack ing : recipe.getIngredients()) {
+                                    if (ing != null && !ing.isEmpty()) {
+                                        String ingStr = ing.getType().name() + ":" + ing.getAmount();
+                                        if (ing.hasItemMeta()) ingStr += "-" + ing.getItemMeta().getAsString();
+                                        ingredients.add(ingStr);
+                                    }
+                                }
+                                String hash = recipe.getResult().getType().name() + ":" + recipe.getResult().getAmount() + "-" + String.join(",", ingredients);
+                                if (recipe.getResult().hasItemMeta()) {
+                                    hash += "-" + recipe.getResult().getItemMeta().getAsString();
+                                }
+
+                                if (seenTrades.add(hash)) {
+                                    registry.addRecipe(new VillagerTradeRecipe(recipe, icon));
+                                }
                             }
                         }
-
-                        v.remove();
                     }
                 }
             }
 
-            ItemStack wtIcon = new ItemStack(Material.WANDERING_TRADER_SPAWN_EGG);
-            wtIcon.setData(DataComponentTypes.ITEM_NAME, Component.translatable("ner.profession.wandering_trader").decoration(TextDecoration.ITALIC, false));
+            if (config.enableWanderingTrader.get()) {
+                ItemStack wtIcon = new ItemStack(Material.WANDERING_TRADER_SPAWN_EGG);
+                wtIcon.setData(DataComponentTypes.ITEM_NAME, Component.translatable("ner.profession.wandering_trader").decoration(TextDecoration.ITALIC, false));
 
-            for (int i = 0; i < 20; i++) {
-                WanderingTrader wt = world.spawn(loc, WanderingTrader.class, trader -> {
-                    trader.setAI(false);
-                    trader.setSilent(true);
-                    trader.setCollidable(false);
-                    trader.setGravity(false);
-                });
+                for (int i = 0; i < WANDERING_TRADER_ITERATIONS; i++) {
 
-                for (MerchantRecipe recipe : wt.getRecipes()) {
-                    List<String> ingredients = new ArrayList<>();
-                    for (ItemStack ing : recipe.getIngredients()) {
-                        if (ing != null) ingredients.add(ing.getType().name() + ":" + ing.getAmount());
-                    }
-                    String hash = recipe.getResult().getType().name() + ":" + recipe.getResult().getAmount() + "-" + String.join(",", ingredients);
-                    if (seenTrades.add(hash)) {
-                        registry.addRecipe(new VillagerTradeRecipe(recipe, wtIcon.clone()));
+                    net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader nmsTrader =
+                    //? >=26.2 {
+                        new net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader(EntityTypes.WANDERING_TRADER, serverLevel);
+                    //?} else
+                    //new net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader(EntityType.WANDERING_TRADER, serverLevel);
+
+                    WanderingTrader wt = (WanderingTrader) nmsTrader.getBukkitEntity();
+
+                    for (MerchantRecipe recipe : wt.getRecipes()) {
+                        List<String> ingredients = new ArrayList<>();
+                        for (ItemStack ing : recipe.getIngredients()) {
+                            if (ing != null && !ing.isEmpty()) {
+                                String ingStr = ing.getType().name() + ":" + ing.getAmount();
+                                if (ing.hasItemMeta()) ingStr += "-" + ing.getItemMeta().getAsString();
+                                ingredients.add(ingStr);
+                            }
+                        }
+                        String hash = recipe.getResult().getType().name() + ":" + recipe.getResult().getAmount() + "-" + String.join(",", ingredients);
+                        if (recipe.getResult().hasItemMeta()) {
+                            hash += "-" + recipe.getResult().getItemMeta().getAsString();
+                        }
+
+                        if (seenTrades.add(hash)) {
+                            registry.addRecipe(new VillagerTradeRecipe(recipe, wtIcon.clone()));
+                        }
                     }
                 }
-
-                wt.remove();
             }
         }
     }

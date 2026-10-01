@@ -25,31 +25,27 @@ public class ControlsMenu {
 
     public static Gui create(Player player) {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
+        final boolean[] transitioning = { false };
 
         return Gui.builder(MenuType.GENERIC_9X4, TextUtil.parse("<white>Controls Configuration"))
             .addFlags(GuiFlag.DISABLE_ADVANCEMENTS, GuiFlag.DISABLE_ITEM_PICKUP)
-            .set(SlotPosition.top(11), buildButton(ControlAction.VIEW_RECIPE, player))
-            .set(SlotPosition.top(13), buildButton(ControlAction.VIEW_USES, player))
-            .set(SlotPosition.top(15), buildButton(ControlAction.TOGGLE_BOOKMARK, player))
-            .set(SlotPosition.top(20), buildReturnFromSearchToggle(player))
-            .set(SlotPosition.top(21), buildReturnFromConfigToggle(player))
-            .set(SlotPosition.top(22), buildShowTooltipsToggle(player))
-            .set(SlotPosition.top(35), new GuiButton(UiItems.CLOSE.getStack(), ctx -> {
-                InventoryBackupManager.transition(ctx.view());
-                if (settings.returnToMenuOnConfigClose.get()) {
-                    AbyssalLib.SCHEDULER.schedule(() -> GuiManager.open(player, MainMenu.create(player))).after(1L, Clock.TICKS).entity(player).once();
-                }
-            }))
+            .set(SlotPosition.top(11), buildButton(ControlAction.VIEW_RECIPE, player, transitioning))
+            .set(SlotPosition.top(13), buildButton(ControlAction.VIEW_USES, player, transitioning))
+            .set(SlotPosition.top(15), buildButton(ControlAction.TOGGLE_BOOKMARK, player, transitioning))
+            .set(SlotPosition.top(20), buildReturnFromSearchToggle(player, transitioning))
+            .set(SlotPosition.top(21), buildReturnFromConfigToggle(player, transitioning))
+            .set(SlotPosition.top(22), buildShowTooltipsToggle(player, transitioning))
+            .set(SlotPosition.top(35), new GuiButton(UiItems.CLOSE.getStack(), ctx -> player.closeInventory()))
             .onOpen(InventoryBackupManager::setup)
             .onClose((view) -> {
                 InventoryBackupManager.restore(view);
-                if (settings.returnToMenuOnConfigClose.get()) {
+                if (!transitioning[0] && settings.returnToMenuOnConfigClose.get()) {
                     AbyssalLib.SCHEDULER.schedule(() -> GuiManager.open(player, MainMenu.create(player))).after(1L, Clock.TICKS).entity(player).once();
                 }
             }).build();
     }
 
-    private static GuiButton buildButton(ControlAction action, Player player) {
+    private static GuiButton buildButton(ControlAction action, Player player, boolean[] transitioning) {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
         ClickType current = settings.getBind(action);
         ItemStack item = new ItemStack(Material.COMMAND_BLOCK);
@@ -63,12 +59,13 @@ public class ControlsMenu {
         return new GuiButton(item, ctx -> {
             ClickType next = cycle(current);
             settings.setBind(action, next);
+            transitioning[0] = true;
             InventoryBackupManager.transition(ctx.view());
             GuiManager.open(player, create(player));
         });
     }
 
-    private static GuiButton buildReturnFromSearchToggle(Player player) {
+    private static GuiButton buildReturnFromSearchToggle(Player player, boolean[] transitioning) {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
         boolean enabled = settings.returnToMenuOnSearchClose.get();
         ItemStack item = new ItemStack(Material.COMPASS);
@@ -83,12 +80,13 @@ public class ControlsMenu {
         return new GuiButton(item, ctx -> {
             settings.returnToMenuOnSearchClose.set(!enabled);
             settings.config.save();
+            transitioning[0] = true;
             InventoryBackupManager.transition(ctx.view());
             GuiManager.open(player, create(player));
         });
     }
 
-    private static GuiButton buildReturnFromConfigToggle(Player player) {
+    private static GuiButton buildReturnFromConfigToggle(Player player, boolean[] transitioning) {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
         boolean enabled = settings.returnToMenuOnConfigClose.get();
         ItemStack item = new ItemStack(Material.COMPASS);
@@ -103,12 +101,13 @@ public class ControlsMenu {
         return new GuiButton(item, ctx -> {
             settings.returnToMenuOnConfigClose.set(!enabled);
             settings.config.save();
+            transitioning[0] = true;
             InventoryBackupManager.transition(ctx.view());
             GuiManager.open(player, create(player));
         });
     }
 
-    private static GuiButton buildShowTooltipsToggle(Player player) {
+    private static GuiButton buildShowTooltipsToggle(Player player, boolean[] transitioning) {
         PlayerSettings settings = UserManager.get(player.getUniqueId());
         boolean enabled = settings.showTooltips.get();
         ItemStack item = new ItemStack(Material.OAK_SIGN);
@@ -122,6 +121,7 @@ public class ControlsMenu {
         return new GuiButton(item, ctx -> {
             settings.showTooltips.set(!enabled);
             settings.config.save();
+            transitioning[0] = true;
             InventoryBackupManager.transition(ctx.view());
             GuiManager.open(player, create(player));
         });

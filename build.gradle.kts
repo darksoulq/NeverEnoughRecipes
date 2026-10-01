@@ -26,8 +26,11 @@ val yamlParser = Yaml()
 fun parseYaml(f: File): Map<String, Any> {
     if (!f.exists()) return emptyMap()
     val obj = yamlParser.load<Any>(f.readText())
-    @Suppress("UNCHECKED_CAST")
-    return (obj as? Map<String, Any>) ?: emptyMap()
+    if (obj is Map<*, *>) {
+        @Suppress("UNCHECKED_CAST")
+        return obj.entries.associate { it.key.toString() to (it.value as Any) }
+    }
+    return emptyMap()
 }
 
 fun readLinesSafe(f: File): List<String> {
